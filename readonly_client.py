@@ -81,7 +81,7 @@ def make_client():
     if not session.strip():
         raise RuntimeError("TG_SESSION пустая. Получите строку сессии через colab_login.py.")
     return ReadOnlyTelegramClient(
-        StringSession(session.strip()),
+        StringSession("".join(session.split())),  # tolerate line breaks from copy-paste
         api_id,
         api_hash,
         receive_updates=False,  # no update loop: we only read on request
