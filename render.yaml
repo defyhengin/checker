@@ -1,0 +1,24 @@
+# Render Blueprint: Render reads this file and creates the service.
+# Values marked sync: false are asked for when you create it.
+services:
+  - type: web
+    name: checker
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /health
+    envVars:
+      - key: TG_API_ID
+        sync: false
+      - key: TG_API_HASH
+        sync: false
+      - key: TG_SESSION
+        sync: false
+      - key: TG_CHAT
+        sync: false
+      - key: TG_TIMEZONE
+        value: Europe/Moscow
+      - key: MCP_TOKEN
+        generateValue: true
