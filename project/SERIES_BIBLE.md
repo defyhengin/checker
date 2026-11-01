@@ -40,6 +40,7 @@
 Нераспределённые идеи: Свидание (две пустые тарелки, свеча), Мама в гостях, Стиралка, Морозилка, Ревизия, Банка возвращается, Холодильник-кинематограф «Ужин. Режиссёрская версия», Список покупок.
 
 ## 6. Техника (как запустить)
+- ВСЯ работа идёт через **Blender (EEVEE)**. Ранние эпизоды (до «Сна» включительно) делались в собственном быстром движке `eng.py` (numpy-рейтрейсер) — он остался только как источник геометрии студии; новые ролики — только Blender. Cycles не использовать (слишком медленно на 2 ядрах), EEVEE без raytracing.
 - `pip install bpy` (Blender 5.x как модуль; Python 3.13), PIL, numpy, ffmpeg; шрифты Inter, DejaVu, Liberation Mono.
 - Студийные эпизоды: `bkit.py` (импортируется; строит студию из `studio.py`/`furniture.py`/`apt.py`/`eng.py`, полый холодильник `FRIDGE` + дверца на `hinge`, кот `Cat`, свет `light()`/`LIGHTS`, `state(groups, lights, fr=угол_дверцы, fr_warm, fr_light, door, world, exp, phone)`, `cam(pos, tgt)`, `shoot(path)`, группы видимости `grp_add`). Запуск: `EP_OUT=ep_x MODE=stills BL_ENGINE=EEVEE EV_SAMPLES=24 WORLD_STR=1.0 python3 ep_x.py x 8 720 1280` (+ `MODE=anim` для анимаций).
 - Магазин: `bl_shop.py` (`SHOP_PREVIEW=1 python3 bl_shop.py 540 960` — превью), эпизод `ep_vitrina.py` (+ `section_off(k)` — гашение света по секциям, телефон перед камерой с DOF).
