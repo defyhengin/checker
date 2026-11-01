@@ -1,0 +1,362 @@
+"""Convert the fast-engine studio scene to Blender and render one view with Cycles."""
+import os, sys, time, math
+import numpy as np
+os.environ.setdefault('ENG_W', '1280'); os.environ.setdefault('ENG_H', '720'); os.environ.setdefault('ENG_TANY', '0.5')
+import bpy
+from mathutils import Vector, Matrix
+from PIL import Image
+import studio, apt
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+VIEW = sys.argv[1] if len(sys.argv) > 1 else 'v1_vhod'
+SAMPLES = int(sys.argv[2]) if len(sys.argv) > 2 else 32
+RX, RY = (int(sys.argv[3]), int(sys.argv[4])) if len(sys.argv) > 4 else (1280, 720)
+
+
+def P(v):
+    """engine (x, y-up, z) -> blender (x, -z, y)"""
+    return Vector((v[0], -v[2], v[1]))
+
+
+bpy.ops.wm.read_factory_settings(use_empty=True)
+sc = bpy.context.scene
+sc.render.engine = 'CYCLES'
+cy = sc.cycles
+cy.device = 'CPU'; cy.samples = SAMPLES; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.05
+cy.use_denoising = True; cy.max_bounces = 4; cy.diffuse_bounces = 3; cy.glossy_bounces = 2; cy.transmission_bounces = 2
+cy.caustics_reflective = False; cy.caustics_refractive = False
+try:
+    cy.use_light_tree = True
+except Exception:
+    pass
+sc.render.resolution_x, sc.render.resolution_y = RX, RY
+ENGINE = os.environ.get('BL_ENGINE', 'CYCLES')
+if ENGINE == 'EEVEE':
+    sc.render.engine = 'BLENDER_EEVEE'
+    ee = sc.eevee
+    for k, v in dict(taa_render_samples=int(os.environ.get('EV_SAMPLES', '32')), use_raytracing=os.environ.get('EV_RT','0')=='1', use_shadows=True, fast_gi_method='GLOBAL_ILLUMINATION').items():
+        try: setattr(ee, k, v)
+        except Exception as e: print('eevee opt', k, e)
+try:
+    sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - High Contrast'; sc.view_settings.exposure = -0.4
+except Exception:
+    pass
+w = bpy.data.worlds.new('W'); sc.world = w; w.use_nodes = True
+w.node_tree.nodes['Background'].inputs[0].default_value = (0.02, 0.025, 0.04, 1)
+w.node_tree.nodes['Background'].inputs[1].default_value = float(os.environ.get('WORLD_STR', '0.15'))
+
+# ---------------- materials ----------------
+NAMES = {v: k for k, v in apt.M.items()}
+MATS = {}
+
+
+def make_window_image():
+    n = 256
+    u, v = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n))
+    X = studio.WIN[0] + u * (studio.WIN[1] - studio.WIN[0]); Y = studio.WIN[2] + v * (studio.WIN[3] - studio.WIN[2])
+    col = studio.window_emit(X.ravel(), Y.ravel(), np.zeros(n * n), 0).reshape(n, n, 3)
+    img = bpy.data.images.new('win', n, n)
+    rgba = np.concatenate([np.clip(col, 0, 1), np.ones((n, n, 1))], -1).astype(np.float32)
+    img.pixels = rgba.ravel()
+    return img
+
+
+def brick_mat(name, c1, c2, mortar, scale, w_ratio, rough):
+    m = bpy.data.materials.new(name); m.use_nodes = True
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    br = nt.nodes.new('ShaderNodeTexBrick')
+    br.inputs['Color1'].default_value = (*c1, 1); br.inputs['Color2'].default_value = (*c2, 1)
+    br.inputs['Mortar'].default_value = (*mortar, 1); br.inputs['Scale'].default_value = scale
+    br.inputs['Mortar Size'].default_value = 0.01; br.inputs['Brick Width'].default_value = w_ratio; br.inputs['Row Height'].default_value = 0.25 if w_ratio > 1 else 0.5
+    br.offset = 0.5
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    nt.links.new(tc.outputs['Object'], br.inputs['Vector'])
+    nt.links.new(br.outputs['Color'], b.inputs['Base Color'])
+    b.inputs['Roughness'].default_value = rough
+    return m
+
+
+def material(mid):
+    if mid in MATS:
+        return MATS[mid]
+    name = NAMES.get(mid, f'm{mid}')
+    col = tuple(float(c) for c in apt.ALB[mid]); spec = float(apt.SPEC[mid])
+    if name == 's_floor':
+        m = brick_mat(name, (0.42, 0.25, 0.12), (0.55, 0.34, 0.18), (0.2, 0.12, 0.06), 3.2, 5.0, 0.45)
+    elif name in ('s_tile', 's_splash'):
+        m = brick_mat(name, (0.82, 0.85, 0.86), (0.78, 0.81, 0.83), (0.45, 0.45, 0.45), 2.5 if name == 's_tile' else 5.0, 1.0, 0.15)
+    else:
+        m = bpy.data.materials.new(name); m.use_nodes = True
+        b = m.node_tree.nodes['Principled BSDF']
+        b.inputs['Base Color'].default_value = (*col, 1)
+        rough = float(np.clip(0.75 - spec * 0.45, 0.06, 0.9))
+        metal = 1.0 if name in ('f_steel', 'f_copper', 'f_mirror') else 0.0
+        if name == 'f_mirror':
+            rough = 0.03
+        b.inputs['Roughness'].default_value = rough
+        b.inputs['Metallic'].default_value = metal
+        if name == 's_win':
+            img = make_window_image()
+            nt = m.node_tree; tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = img; tex.extension = 'EXTEND'
+            tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); cmb = nt.nodes.new('ShaderNodeCombineXYZ')
+            nt.links.new(tc.outputs['Generated'], sep.inputs[0])
+            nt.links.new(sep.outputs['X'], cmb.inputs['X']); nt.links.new(sep.outputs['Z'], cmb.inputs['Y'])
+            nt.links.new(cmb.outputs[0], tex.inputs['Vector'])
+            nt.links.new(tex.outputs['Color'], b.inputs['Emission Color'])
+            b.inputs['Emission Strength'].default_value = 3.0
+            b.inputs['Base Color'].default_value = (0, 0, 0, 1)
+        if name == 's_lamp':
+            b.inputs['Emission Color'].default_value = (1.0, 0.85, 0.6, 1); b.inputs['Emission Strength'].default_value = 3
+        if name == 'f_screen_f':
+            b.inputs['Roughness'].default_value = 0.08
+    MATS[mid] = m
+    return m
+
+
+# ---------------- geometry ----------------
+BIG = 1.2   # boxes larger than this (walls, floor) get no bevel
+coll = bpy.data.collections.new('studio'); sc.collection.children.link(coll)
+
+
+def link(o):
+    for c in o.users_collection:
+        c.objects.unlink(o)
+    coll.objects.link(o)
+
+
+def add_box(a, b, mid, yaw=0.0, pivot=None):
+    a = np.array(a, float); b = np.array(b, float)
+    size = b - a; c = (a + b) / 2
+    bpy.ops.mesh.primitive_cube_add(size=1)
+    o = bpy.context.object
+    o.scale = (size[0], size[2], size[1])
+    o.location = P(c)
+    if yaw:
+        piv = P((pivot[0], 0, pivot[1])); rel = o.location - piv
+        o.location = piv + Matrix.Rotation(yaw, 3, 'Z') @ rel; o.rotation_euler = (0, 0, yaw)
+    if max(size) < BIG and min(size) > 0.012:
+        md = o.modifiers.new('b', 'BEVEL'); md.width = min(0.006, min(size) * 0.25); md.segments = 2; md.limit_method = 'NONE'
+    o.data.materials.append(material(mid)); link(o)
+
+
+def add_cyl(cx, cz, r, y0, y1, mid):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=r, depth=max(y1 - y0, 1e-4), location=P((cx, (y0 + y1) / 2, cz)))
+    o = bpy.context.object; bpy.ops.object.shade_smooth(); o.data.materials.append(material(mid)); link(o)
+
+
+def add_disc(cx, cy_, cz, r, mid, axis='y'):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=r, depth=0.002, location=P((cx, cy_, cz)))
+    o = bpy.context.object
+    if axis == 'z':
+        o.rotation_euler = (math.pi / 2, 0, 0)
+    o.data.materials.append(material(mid)); link(o)
+
+
+def add_sph(c, r, mid):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=r, location=P(c))
+    o = bpy.context.object; bpy.ops.object.shade_smooth(); o.data.materials.append(material(mid)); link(o)
+
+
+def add_cap(a, b, r, mid):
+    A, Bv = P(a), P(b)
+    d = Bv - A; L = d.length
+    if L > 1e-5:
+        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=r, depth=L, location=(A + Bv) / 2)
+        o = bpy.context.object
+        o.rotation_euler = d.to_track_quat('Z', 'Y').to_euler()
+        bpy.ops.object.shade_smooth(); o.data.materials.append(material(mid)); link(o)
+    for p in (a, b):
+        add_sph(p, r, mid)
+
+
+def emit(prims):
+    for p in prims:
+        k = p['k']
+        if k == 'grp':
+            emit(p['items'])
+        elif k == 'box':
+            add_box(p['a'], p['b'], p['m'])
+        elif k == 'obox':
+            a = np.array(p['a']); b = np.array(p['b'])
+            add_box((a[0] + p['p'][0], a[1], a[2] + p['p'][1]), (b[0] + p['p'][0], b[1], b[2] + p['p'][1]), p['m'], yaw=p['yaw'], pivot=p['p'])
+        elif k == 'cyl':
+            add_cyl(p['cx'], p['cz'], p['r'], p['y0'], p['y1'], p['mo'])
+        elif k == 'disc':
+            add_disc(p['cx'], p['cy'], p['cz'], p['r'], p['m'])
+        elif k == 'zdisc':
+            add_disc(p['cx'], p['cy'], p['cz'], p['r'], p['m'], 'z')
+        elif k == 'sph':
+            add_sph(p['c'], p['r'], p['m'])
+        elif k == 'cap':
+            add_cap(p['a'], p['b'], p['r'], p['m'])
+
+
+cam_e, tgt_e = (2.1, 1.12, 3.75), (2.75, 1.0, 4.05)
+S = studio.scene(cam_e, tgt_e)
+t0 = time.time()
+emit(S['prims'])
+print('objects', len(coll.objects), 'build', round(time.time() - t0, 1), 's', flush=True)
+
+
+# ================= «Чайник» =================
+FPS = 12
+DUR = 11.0
+PER = 1.5                       # steam loop period (18 frames)
+T_OFF = 4.0
+T_M0, T_M1 = 4.4, 6.2
+KET = np.array((2.75, 0.9, 4.05)); MUG = np.array((2.6, 0.9, 4.3))
+C0 = np.array((2.12, 1.13, 3.78)); L0 = np.array((2.75, 1.03, 4.05))
+C1 = np.array((2.12, 1.12, 4.08)); L1 = np.array((2.6, 0.97, 4.3))
+
+
+def simple_mat(name, col, rough=0.5, metal=0.0, emit=None, es=0.0):
+    m = bpy.data.materials.new(name); m.use_nodes = True
+    b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (*col, 1); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal
+    if emit:
+        b.inputs['Emission Color'].default_value = (*emit, 1); b.inputs['Emission Strength'].default_value = es
+    return m
+
+
+def link2(o):
+    for c in o.users_collection:
+        c.objects.unlink(o)
+    coll.objects.link(o)
+
+
+for m in bpy.data.materials:
+    if m.name.startswith('s_lamp'):
+        m.node_tree.nodes['Principled BSDF'].inputs['Emission Strength'].default_value = 0.0
+
+# indicator on the kettle base
+M_IND = simple_mat('ind', (0.2, 0.5, 1.0), 0.3, emit=(0.25, 0.55, 1.0), es=0.0)
+bpy.ops.mesh.primitive_cube_add(size=1); o = bpy.context.object
+o.scale = (0.004, 0.016, 0.008); o.location = P(KET + np.array((-0.081, 0.011, 0.0))); o.data.materials.append(M_IND); link2(o)
+
+# mug with plain hot water
+M_MUG = simple_mat('mug', (0.85, 0.84, 0.8), 0.25)
+M_WAT = simple_mat('water', (0.5, 0.42, 0.3), 0.05)
+bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.045, depth=0.1, location=P(MUG + np.array((0, 0.05, 0))))
+o = bpy.context.object; o.data.materials.append(M_MUG); link2(o)
+md = o.modifiers.new('s', 'SOLIDIFY'); md.thickness = 0.005
+bm_del = o.data.polygons
+# open the top: delete the top face via bmesh
+import bmesh
+bm = bmesh.new(); bm.from_mesh(o.data)
+top = [f for f in bm.faces if f.normal.z > 0.9]
+bmesh.ops.delete(bm, geom=top, context='FACES'); bm.to_mesh(o.data); bm.free()
+bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.04, depth=0.002, location=P(MUG + np.array((0, 0.082, 0))))
+o = bpy.context.object; o.data.materials.append(M_WAT); link2(o)
+bpy.ops.mesh.primitive_torus_add(major_radius=0.025, minor_radius=0.006, location=P(MUG + np.array((0.0, 0.055, 0.048))))
+o = bpy.context.object; o.rotation_euler = (0, 0, 0); o.rotation_euler = (math.pi / 2, 0, 0); o.data.materials.append(M_MUG); link2(o)
+
+# steam puffs
+STEAM = []
+def make_puffs(src, n, tag):
+    out = []
+    for i in range(n):
+        m = bpy.data.materials.new(f'st_{tag}{i}'); m.use_nodes = True
+        b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (0.9, 0.92, 0.95, 1)
+        b.inputs['Emission Color'].default_value = (1, 0.95, 0.9, 1); b.inputs['Emission Strength'].default_value = 0.4
+        b.inputs['Roughness'].default_value = 1.0
+        try:
+            m.surface_render_method = 'BLENDED'
+        except Exception:
+            m.blend_method = 'BLEND'
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1)
+        o = bpy.context.object; o.data.materials.append(m); link2(o); bpy.ops.object.shade_smooth()
+        out.append((o, b, i / n, np.random.default_rng(i + (0 if tag == 'k' else 100)).uniform(-1, 1, 3)))
+    return out
+
+
+KP = make_puffs(KET + np.array((0, 0.23, 0)), 16, 'k')
+MP = make_puffs(MUG + np.array((0, 0.09, 0)), 12, 'm')
+
+
+def set_steam(puffs, src, t_phase, inten, rise=0.32, spread=0.06, r0=0.015, r1=0.075):
+    for o, b, ph, rnd in puffs:
+        a = (t_phase / PER + ph) % 1.0
+        pos = src + np.array((rnd[0] * spread * a + 0.02 * math.sin(6 * a + rnd[2] * 3), a * rise, rnd[1] * spread * a))
+        o.location = P(pos); r = r0 + (r1 - r0) * a; o.scale = (r, r, r * 1.2)
+        b.inputs['Alpha'].default_value = float(0.13 * math.sin(math.pi * a) ** 1.5 * inten)
+        o.hide_render = inten < 0.02
+
+
+def add_light(kind, pos, energy, col, size=0.05, direction=None):
+    ld = bpy.data.lights.new('L', kind); ld.energy = energy; ld.color = col; ld.shadow_soft_size = size
+    if kind == 'AREA':
+        ld.size = size
+    o = bpy.data.objects.new('L', ld); coll.objects.link(o); o.location = P(pos)
+    if direction is not None:
+        o.rotation_euler = P(direction).to_track_quat('-Z', 'Y').to_euler()
+    return o
+
+
+add_light('AREA', ((studio.WIN[0] + studio.WIN[1]) / 2, 1.55, studio.Z1 + 0.04), 18, (0.35, 0.45, 0.95), 1.4, (0, 0, -1))
+add_light('SPOT', (2.62, 1.5, 3.85), 22, (1.0, 0.72, 0.45), 0.08, (0.05, -1, 0.25))
+add_light('POINT', (2.0, 1.4, 3.9), 4, (1.0, 0.75, 0.5), 0.2)
+IND_L = add_light('POINT', KET + np.array((-0.1, 0.02, 0)), 0.25, (0.25, 0.55, 1.0), 0.01)
+
+cd = bpy.data.cameras.new('C'); cd.sensor_fit = 'VERTICAL'; cd.angle_y = 2 * math.atan(0.5); cd.clip_start = 0.02
+co = bpy.data.objects.new('C', cd); coll.objects.link(co); sc.camera = co
+
+
+def sstep(x):
+    x = min(max(x, 0.0), 1.0); return x * x * (3 - 2 * x)
+
+
+def lerp(a, b, s):
+    return a + (b - a) * s
+
+
+def cam_state(t):
+    s = sstep((t - T_M0) / (T_M1 - T_M0)); return lerp(C0, C1, s), lerp(L0, L1, s)
+
+
+def k_inten(t):
+    return 1.0 if t < T_OFF else max(0.3, 1.0 - 0.35 * (t - T_OFF))
+
+
+def frame_key(fi):
+    t = fi / FPS; pos, look = cam_state(t)
+    return f'{fi % 18}_{k_inten(t):.2f}_{int(t < T_OFF)}_' + '_'.join(f'{v:.4f}' for v in np.concatenate([pos, look]))
+
+
+def render_at(t, path):
+    fi = int(round(t * FPS)); tp = (fi % 18) / FPS
+    pos, look = cam_state(t)
+    co.location = P(pos); co.rotation_euler = (P(look) - P(pos)).to_track_quat('-Z', 'Y').to_euler()
+    on = t < T_OFF
+    M_IND.node_tree.nodes['Principled BSDF'].inputs['Emission Strength'].default_value = 8.0 if on else 0.0
+    IND_L.data.energy = 0.25 if on else 0.0
+    set_steam(KP, KET + np.array((0, 0.225, 0)), tp, k_inten(t))
+    set_steam(MP, MUG + np.array((0, 0.085, 0)), tp + 0.37, 0.75, rise=0.22, spread=0.045, r0=0.012, r1=0.05)
+    sc.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+
+
+MODE = os.environ.get('OKNA_MODE', 'preview')
+OD = os.path.join(HERE, 'tea'); os.makedirs(OD, exist_ok=True)
+if MODE == 'preview':
+    for ts_ in os.environ.get('OKNA_T', '1.0,8.0').split(','):
+        t1 = time.time(); render_at(float(ts_), os.path.join(HERE, f'tea_prev_{ts_}.png')); print('prev', ts_, round(time.time() - t1, 1), flush=True)
+else:
+    import hashlib
+    NF = int(DUR * FPS)
+    keys = [frame_key(fi) for fi in range(NF)]
+    uniq = {}
+    for fi, k in enumerate(keys):
+        uniq.setdefault(k, fi)
+    print('unique renders', len(uniq), 'of', NF, flush=True)
+    names = {k: 'h_' + hashlib.md5(k.encode()).hexdigest()[:14] + '.png' for k in uniq}
+    t1 = time.time()
+    for i, (k, fi) in enumerate(uniq.items()):
+        pth = os.path.join(OD, names[k])
+        if not os.path.exists(pth):
+            render_at(fi / FPS, pth)
+    for fi, k in enumerate(keys):
+        dst = os.path.join(OD, f'f_{fi:04d}.png')
+        if os.path.exists(dst):
+            os.remove(dst)
+        os.link(os.path.join(OD, names[k]), dst)
+    print('render done', round(time.time() - t1), flush=True)
