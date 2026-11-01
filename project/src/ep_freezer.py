@@ -19,7 +19,7 @@ EVE = ((0.06, 0.055, 0.055), 1.1)
 TBL = ['pend', 'ceilsoft', 'fill', 'win', 'warm']
 
 # ---- freezer compartment at the top of the fridge, frosted, open front ----
-M_FROST = noise_mat('frost', (0.86, 0.92, 0.98), (0.97, 0.99, 1.0), 0.6, 90)
+M_FROST = noise_mat('frost', (0.66, 0.78, 0.9), (0.85, 0.92, 0.98), 0.6, 90)
 M_ICE = simple_mat('ice', (0.8, 0.9, 1.0), 0.15)
 FY0, FY1, FX0, FX1, FZ0, FZ1 = 1.4, 1.74, 2.42, 2.9, 1.24, 1.76
 box((FX0, FY0, FZ0), (FX1, FY0 + 0.025, FZ1), M_FROST, 'frz')           # floor
@@ -28,27 +28,29 @@ box((FX1 - 0.025, FY0, FZ0), (FX1, FY1, FZ1), M_FROST, 'frz')           # back
 box((FX0, FY0, FZ0), (FX1, FY1, FZ0 + 0.025), M_FROST, 'frz')           # sides
 box((FX0, FY0, FZ1 - 0.025), (FX1, FY1, FZ1), M_FROST, 'frz')
 rng = np.random.default_rng(11)
-for i in range(26):                                                         # frost lumps / icicles
-    x = rng.uniform(FX0 + 0.05, FX1 - 0.05); z = rng.uniform(FZ0 + 0.04, FZ1 - 0.04)
-    ellip((x, FY0 + 0.025, z), (rng.uniform(0.015, 0.04), rng.uniform(0.006, 0.018), rng.uniform(0.015, 0.04)), M_FROST, 'frz', 1)
+for i in range(14):                                                         # frost lumps / icicles
+    x = rng.uniform(FX0 + 0.2, FX1 - 0.05); z = rng.uniform(FZ0 + 0.04, FZ1 - 0.04)
+    ellip((x, FY0 + 0.025, z), (rng.uniform(0.012, 0.03), rng.uniform(0.004, 0.01), rng.uniform(0.012, 0.03)), M_FROST, 'frz', 1)
 for i in range(7):
     x = rng.uniform(FX0 + 0.04, FX1 - 0.06); z = rng.uniform(FZ0 + 0.05, FZ1 - 0.05)
     ellip((x, FY1 - 0.04, z), (0.008, rng.uniform(0.02, 0.04), 0.008), M_ICE, 'frz', 1)
 # the dumpling: half-moon body + pinched crest, frosted
-M_DOUGH = noise_mat('dough', (0.93, 0.9, 0.82), (0.98, 0.97, 0.94), 0.55, 50)
+M_DOUGH = noise_mat('dough', (0.86, 0.72, 0.48), (0.93, 0.83, 0.62), 0.55, 50)
 M_DOUGH_W = noise_mat('dough_warm', (0.95, 0.88, 0.72), (0.99, 0.94, 0.82), 0.4, 50)
 
 
 def dumpling(c, m, g, rot=0.4):
-    b = ellip(c, (0.032, 0.016, 0.022), m, g, 2, (0, 0, rot))
-    ellip((c[0], c[1] + 0.012, c[2]), (0.03, 0.007, 0.006), m, g, 2, (0, 0, rot))
+    b = ellip(c, (0.04, 0.018, 0.027), m, g, 2, (0, 0, rot))
+    ellip((c[0], c[1] + 0.014, c[2]), (0.037, 0.008, 0.007), m, g, 2, (0, 0, rot))
     return b
 
 
-DP = (FX0 + 0.14, FY0 + 0.04, 1.5)
+DP = (FX0 + 0.12, FY0 + 0.042, 1.5)
 dumpling(DP, M_DOUGH, 'frz')
-for i in range(10):
-    ellip((DP[0] + rng.uniform(-0.03, 0.03), DP[1] + 0.012 + rng.uniform(0, 0.008), DP[2] + rng.uniform(-0.02, 0.02)), (0.004, 0.003, 0.004), M_ICE, 'frz', 1)
+M_RIME = simple_mat('rime', (0.92, 0.96, 1.0), 0.8)
+for i in range(14):
+    a = rng.uniform(0, 2 * math.pi)
+    ellip((DP[0] + 0.022 * math.cos(a), DP[1] + 0.006 + rng.uniform(0, 0.01), DP[2] + 0.015 * math.sin(a)), (0.003, 0.0015, 0.003), M_RIME, 'frz', 1)
 
 # ---- dinner on the table ----
 PL = (TXc, 0.762, TZc - 0.22)
@@ -58,7 +60,7 @@ M_FORK = simple_mat('fork', (0.75, 0.75, 0.77), 0.25, 1.0)
 box((PL[0] + 0.16, PL[1], PL[2] - 0.09), (PL[0] + 0.175, PL[1] + 0.006, PL[2] + 0.09), M_FORK, 'dinner')
 
 # cat (fed) by its full bowl, looking at the plate
-CATP = np.array((1.75, 0.0, 3.05))
+CATP = np.array((0.4, 0.48, 2.55))
 kitty = Cat(CATP, yaw_to(CATP, (PL[0], 0, PL[2]), 0))
 BOWLP = (1.95, 0.022, 3.25); bowl(BOWLP, 'dinner')
 M_KIB = simple_mat('kibble', (0.42, 0.24, 0.1), 0.7)
@@ -95,7 +97,7 @@ def set_steam(src, ph_, rise=0.26, spread=0.05, r0=0.018, r1=0.055):
         b.inputs['Alpha'].default_value = float(0.1 * math.sin(math.pi * a) ** 1.5)
 
 
-DCAM = ((TXc - 0.5, 1.15, TZc - 0.75), (PL[0] + 0.15, PL[1] - 0.05, PL[2] + 0.25), 0.6)
+DCAM = ((1.8, 1.2, 1.75), (0.8, 0.64, 2.6), 0.6)
 if MODE == 'stills':
     if want('z1'):
         sc.render.resolution_x, sc.render.resolution_y = BIGW, BIGH
@@ -105,8 +107,8 @@ if MODE == 'stills':
         shoot(os.path.join(OUT, 'z1.png'))
         sc.render.resolution_x, sc.render.resolution_y = int(sys.argv[3]), int(sys.argv[4])
     if want('z2'):
-        state(['frz'], ['fr1', 'fr2', 'frfill', 'frz'], fr=105, fr_warm=0.0, world=EVE, exp=0.0)
-        cam((DP[0] - 0.3, DP[1] + 0.14, DP[2] - 0.02), DP, 0.35)
+        state(['frz'], ['fr1', 'fr2', 'frfill', 'frz'], fr=105, fr_warm=0.0, world=EVE, exp=-0.7)
+        cam((DP[0] - 0.32, DP[1] + 0.12, DP[2] - 0.03), DP, 0.3)
         shoot(os.path.join(OUT, 'z2.png'))
     if want('z4'):
         state(['dinner', 'cat'], TBL + ['catfill'], world=EVE, exp=0.1)

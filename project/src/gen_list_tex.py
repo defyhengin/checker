@@ -33,3 +33,10 @@ d.text((200, 220), 'для кошек', font=ImageFont.truetype(F + 'Inter-Bold.
 d.text((200, 300), 'с курицей', font=ImageFont.truetype(F + 'Inter-Regular.otf', 36), fill=(255, 240, 220), anchor='mm')
 im.save('korm.png')
 print('ok')
+
+# «Из 47-й»: thank-you note from the neighbours (generated in ep_from47 session)
+im = Image.new('RGB', (600, 420), (247, 242, 222)); d = ImageDraw.Draw(im)
+ink = (40, 55, 110); f = ImageFont.truetype(F + 'InterDisplay-MediumItalic.otf', 64)
+d.text((40, 40), 'Спасибо, что', font=f, fill=ink); d.text((40, 130), 'вернули роллы!', font=f, fill=ink)
+d.text((200, 270), '— кв. 47', font=ImageFont.truetype(F + 'InterDisplay-MediumItalic.otf', 60), fill=ink)
+im.filter(ImageFilter.GaussianBlur(0.5)).save('note47.png')
