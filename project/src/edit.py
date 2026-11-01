@@ -34,7 +34,9 @@ def _view(sg, t):
         im = _img(os.path.join(d, f'f_{fi:04d}.png'))
     else:
         im = _img(sg['src'])
-    W, H = im.size; cw, ch = W / z, H / z
+    W, H = im.size; ch = H / z; cw = ch * OW / OH
+    if cw > W:
+        cw = W / z; ch = cw * OH / OW
     x0 = min(max(cx * W - cw / 2, 0), W - cw); y0 = min(max(cy * H - ch / 2, 0), H - ch)
     out = np.asarray(im.resize((OW, OH), Image.LANCZOS, box=(x0, y0, x0 + cw, y0 + ch)), np.float32)
     if sg['overlay']:
