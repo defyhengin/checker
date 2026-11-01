@@ -5,7 +5,7 @@ sys.argv = [sys.argv[0], os.environ.get('RX', '720'), os.environ.get('RY', '1280
 os.environ['SHOP_PREVIEW'] = '0'
 from bl_shop import *
 
-OD = os.path.join(HERE, 'ep_kassa'); os.makedirs(OD, exist_ok=True)
+OD = os.path.join(HERE, os.environ.get('KOUT', 'ep_kassa')); os.makedirs(OD, exist_ok=True)
 O = SHOP_OFF
 R = (int(os.environ.get('RX', '720')), int(os.environ.get('RY', '1280')))
 WANT = [s for s in os.environ.get('SHOTS', '').split(',') if s]
@@ -26,6 +26,13 @@ def want(n):
 def im(name, alb, es=2.0, rough=0.5):
     return img_mat(name, alb, alb, es, rough, 'xz')
 
+
+# ---------------- shelf products: their labels came out mirrored -> use horizontally flipped textures ----------------
+for _i in range(6):
+    _m = bpy.data.materials.get(f'prod{_i}')
+    for _n in _m.node_tree.nodes:
+        if _n.type == 'TEX_IMAGE':
+            _n.image = bpy.data.images.load(os.path.join(SH, f'prod_{_i}_flip.png'))
 
 # ---------------- the cashier faces the customer (yaw 0 = face toward -y) and gets two eyes ----------------
 CASHIER.rotation_euler = (0, 0, 0)
