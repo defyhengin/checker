@@ -55,7 +55,7 @@ E._view = _view
 TL = [seg(0.0, 5.5, f'{D}/w1_{{L}}.png', 1.0, 1.25, (0.5, 0.5), (0.52, 0.45)),
       seg(5.5, 10.0, f'{D}/s1_{{L}}.png', 1.0, 1.08, (0.5, 0.5), (0.5, 0.48), xf=0.4),
       seg(10.0, 14.0, f'{D}/w2_{{L}}.png', 1.0, 1.1, (0.5, 0.55), (0.5, 0.5), xf=0.4),
-      seg(14.0, 20.0, f'{D}/s1_{{L}}.png', 1.08, 1.16, (0.45, 0.5), (0.42, 0.52), xf=0.5, overlay=ov_tear),
+      seg(14.0, 20.0, f'{D}/s1_{{L}}.png', 1.08, 1.16, (0.45, 0.5), (0.42, 0.52), xf=0.5),
       seg(20.0, DUR, f'{D}/w1_{{L}}.png', 1.25, 1.05, (0.52, 0.45), (0.5, 0.5), xf=0.8)]
 build_video(TL, DUR, 'sad2_main.mp4')
 
@@ -69,17 +69,13 @@ for fi in range(NF):                                       # relay ticks when th
     if LAMP[fi] != prev:
         kk = int(0.012 * SR); m.add_at(fi / FPS, bandpass(m.rng.normal(0, 1, kk), 2500, 8000) * np.exp(-np.linspace(0, 6, kk)) * 0.10)
     prev = LAMP[fi]
-for at in (14.3, 17.2, 19.9):
-    k = int(0.06 * SR); tm = np.arange(k) / SR
-    m.add_at(at, np.sin(2 * np.pi * 1900 * tm) * np.exp(-tm * 70) * 0.05)
 m.meow(12.2, 0.6, 420, 0.18)                               # the cat, quietly
 m.thud(21.7, 0.08)
 m.save('sad2.wav')
 subs('sad2.ass', DUR, [(0.4, 2.9, "Ночь.", 'Default'), (3.0, 5.3, "Дверца опять приоткрыта.", 'Default'),
                        (6.0, 9.6, "Лампа мигает.", 'Default'),
                        (10.3, 13.8, "Кот сытый. Просто смотрит.", 'Default'),
-                       (14.6, 19.6, "Ему тоже одиноко.", 'Default'),
-                       (21.8, 23.8, "Выключаю свет.", 'Default')])
+                       (14.6, 19.6, "Ему тоже одиноко.", 'Default')])
 final('sad2_main.mp4', 'sad2.wav', 'sad2.ass', 'shorts_sad.mp4', DUR)
 sheet('shorts_sad.mp4', [2, 3.6, 7, 11, 15, 18, 20.5, 23], 'sad2_check.png')
 print('done')
