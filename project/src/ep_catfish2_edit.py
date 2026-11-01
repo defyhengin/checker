@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from edit import *
 from film import lowpass, bandpass, ssv
-D = 'ep_catfish2'; DUR = 15.0; N = int(DUR * 24)
+D = os.environ.get('CF_DIR', 'ep_catfish2'); DUR = 15.0; N = int(DUR * 24)
 
 
 def build_seq():
@@ -13,7 +13,7 @@ def build_seq():
         dst = os.path.join(sd, f'f_{i:04d}.png')
         if os.path.exists(dst):
             os.remove(dst)
-        if i % 2 == 0:
+        if os.path.exists(os.path.join(md, f'f_{i:04d}.png')):
             os.link(os.path.join(md, f'f_{i:04d}.png'), dst)
         else:
             a = np.asarray(Image.open(os.path.join(md, f'f_{i - 1:04d}.png')).convert('RGB'), np.float32)
