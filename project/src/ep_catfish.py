@@ -25,12 +25,17 @@ EYEP = np.array((0.85, 1.5, 1.65))
 kitty = Cat(CATP, yaw_to(CATP, (EYEP[0], 0, EYEP[2]), -10))
 A_CAM = kitty.look_angles(EYEP)
 if MODE == 'stills':
-    state(['rug', 'fish', 'cat'], ['mwin', 'hall'], world=MORN)
+    state(['rug', 'fish', 'cat'], ['mwin', 'hall'], world=MORN, exp=0.35)
     kitty.head(*A_CAM); kitty.tail(0.2)
     cam((0.72, 0.42, 0.95), FP + (0, 0.02, 0)); shoot(os.path.join(OUT, 'f1.png'))
+    cam((1.55, 0.55, 2.0), (0.8, 0.45, 0.45), 0.6); shoot(os.path.join(OUT, 'w1.png'))              # wide from the room
+    cam((0.3, 0.2, 1.05), FP + (0, 0.02, 0), 0.4); shoot(os.path.join(OUT, 'f2.png'))                # fish close, cat behind
+    state(['rug', 'fish', 'cat'], ['mwin', 'hall'], world=MORN, exp=0.35)
+    kitty.head(*kitty.look_angles(FP)); kitty.tail(0.1)
+    cam((1.35, 0.35, 1.5), (0.7, 0.28, 0.5), 0.5); shoot(os.path.join(OUT, 'f3.png'))               # cat looks at its catch
 else:
     D = os.path.join(OUT, 'cat'); os.makedirs(D, exist_ok=True)
-    state(['rug', 'fish', 'cat'], ['mwin', 'hall'], world=MORN)
+    state(['rug', 'fish', 'cat'], ['mwin', 'hall'], world=MORN, exp=0.35)
     cam(EYEP, (0.75, 0.18, 0.52))
     for fi in range(60):
         kitty.head(A_CAM[0], A_CAM[1] + 0.03 * math.sin(2 * math.pi * fi / 60)); kitty.tail(0.4 * math.sin(2 * math.pi * fi / 30))
