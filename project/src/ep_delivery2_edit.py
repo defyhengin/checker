@@ -23,7 +23,7 @@ m.clink(14.9, 0.1, 2600); m.clink(15.05, 0.08, 3100)     # message arrives
 m.save('del.wav')
 subs('del.ass', DUR, [(0.4, 2.4, "Под дверью — ужин.", 'Box'), (2.6, 4.4, "Не мой.", 'Box'),
                       (5.2, 8.3, "Восемь штук.", 'Box'),
-                      (9.2, 11.8, "А это — мой.", 'Box'),
+                      (9.2, 11.8, "А у меня — пусто.", 'Box'),
                       (12.5, 14.4, "Вернул.", 'Box')])
 final('del_main.mp4', 'del.wav', 'del.ass', 'shorts_delivery.mp4', DUR)
 sheet('shorts_delivery.mp4', [1.0, 3.5, 6.0, 8.0, 10.5, 13.3, 15.5, 17.6], 'del_check.png')
