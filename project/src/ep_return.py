@@ -53,7 +53,7 @@ light('nfill', 'AREA', (1.0, 2.3, 1.8), 8, (0.6, 0.65, 0.9), 2.0, (0.6, -1, -0.3
 NIGHT = ((0.02, 0.025, 0.04), 1.3)
 if MODE == 'stills':
     set_fridge(PATH[0], 90, 1.0)
-    state(['trace'], ['moon', 'nfill'], world=NIGHT)
+    state(['trace'], ['moon', 'nfill'], world=NIGHT, exp=0.7)
     cam((1.25, 1.5, 2.65), (2.9, 0.95, 1.5)); shoot(os.path.join(OUT, 'n1.png'))
     state(['trace', 'stair'], ['moon', 'nfill', 'stair'], door=False, world=NIGHT)
     cam((0.66, 1.4, 1.9), (0.64, 0.95, -0.6)); shoot(os.path.join(OUT, 'n2.png'))
@@ -66,7 +66,10 @@ else:
     state(['trace', 'stair'], ['moon', 'nfill', 'stair'], door=False, world=NIGHT)
     T = (len(PATH) - 1) * HOP + 0.4; N = int(T * 24)
     C = np.array((0.15, 1.5, 2.85)); yaw_s = None
+    STEP = int(os.environ.get('STEP', '2'))
     for fi in range(N):
+        if fi % STEP and fi != N - 1:
+            continue
         t = fi / 24.0
         pos, yaw, sq = fridge_pose(t); set_fridge(pos, yaw, sq)
         tgt = pos + np.array((0, 0.85, 0))
