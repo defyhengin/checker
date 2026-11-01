@@ -7,6 +7,7 @@ Run: EP_OUT=ep_freezer MODE=stills BL_ENGINE=EEVEE EV_SAMPLES=24 WORLD_STR=1.0 p
 import os, sys, math
 os.environ.setdefault('EP_OUT', 'ep_freezer')
 from bkit import *
+from pelmen import pelmen, deep_bowl, water, steam_volume, set_steam_phase
 MODE = os.environ.get('MODE', 'stills')
 WANT = [x for x in os.environ.get('SHOTS', '').split(',') if x]
 want = lambda n: not WANT or n in WANT
@@ -46,18 +47,20 @@ def dumpling(c, m, g, rot=0.4):
 
 
 DP = (FX0 + 0.12, FY0 + 0.042, 1.5)
-dumpling(DP, M_DOUGH, 'frz')
-M_RIME = simple_mat('rime', (0.92, 0.96, 1.0), 0.8)
-for i in range(14):
-    a = rng.uniform(0, 2 * math.pi)
-    ellip((DP[0] + 0.022 * math.cos(a), DP[1] + 0.006 + rng.uniform(0, 0.01), DP[2] + 0.015 * math.sin(a)), (0.003, 0.0015, 0.003), M_RIME, 'frz', 1)
+pelmen((DP[0], FY0 + 0.026, DP[2]), M_DOUGH, 'frz', 2.3)
+pass
 
 # ---- dinner on the table ----
 PL = (TXc, 0.762, TZc - 0.22)
-plate(PL, 'dinner')
-dumpling((PL[0], PL[1] + 0.03, PL[2]), M_DOUGH_W, 'dinner', 0.2)
-M_FORK = simple_mat('fork', (0.75, 0.75, 0.77), 0.25, 1.0)
-box((PL[0] + 0.16, PL[1], PL[2] - 0.09), (PL[0] + 0.175, PL[1] + 0.006, PL[2] + 0.09), M_FORK, 'dinner')
+M_SBOWL = simple_mat('soupbowl', (0.32, 0.5, 0.68), 0.3)
+M_WAT = simple_mat('water', (0.5, 0.42, 0.24), 0.04)
+deep_bowl(PL, M_SBOWL, 'dinner')
+water((PL[0], PL[1] + 0.045, PL[2]), 0.1, M_WAT, 'dinner')
+pelmen((PL[0] + 0.01, PL[1] + 0.038, PL[2]), M_DOUGH_W, 'dinner', 1.2)
+M_SPOON = simple_mat('spoon', (0.75, 0.75, 0.77), 0.25, 1.0)
+box((PL[0] + 0.15, PL[1], PL[2] - 0.09), (PL[0] + 0.165, PL[1] + 0.006, PL[2] + 0.07), M_SPOON, 'dinner')
+ellip((PL[0] + 0.1575, PL[1] + 0.006, PL[2] - 0.11), (0.018, 0.005, 0.026), M_SPOON, 'dinner', 2)
+VOL = steam_volume((PL[0], PL[1] + 0.045, PL[2]), 'steam')
 
 # cat (fed) by its full bowl, looking at the plate
 CATP = np.array((0.4, 0.48, 2.55))
@@ -86,7 +89,7 @@ def make_puffs(n):
     return out
 
 
-PUFFS = make_puffs(16)
+PUFFS = []
 
 
 def set_steam(src, ph_, rise=0.26, spread=0.05, r0=0.018, r1=0.055):
@@ -108,7 +111,7 @@ if MODE == 'stills':
         sc.render.resolution_x, sc.render.resolution_y = int(sys.argv[3]), int(sys.argv[4])
     if want('z2'):
         state(['frz'], ['fr1', 'fr2', 'frfill', 'frz'], fr=105, fr_warm=0.0, world=EVE, exp=-0.7)
-        cam((DP[0] - 0.32, DP[1] + 0.12, DP[2] - 0.03), DP, 0.3)
+        cam((DP[0] - 0.2, DP[1] + 0.17, DP[2] - 0.05), (DP[0], DP[1] - 0.012, DP[2]), 0.3)
         shoot(os.path.join(OUT, 'z2.png'))
     if want('z4'):
         state(['dinner', 'cat'], TBL + ['catfill'], world=EVE, exp=0.1)
@@ -119,8 +122,8 @@ else:
     D = os.path.join(OUT, 'steam'); os.makedirs(D, exist_ok=True)
     state(['dinner', 'cat', 'steam'], TBL + ['catfill'], world=EVE, exp=0.1)
     cam(*DCAM)
-    for fi in range(36):
-        set_steam((PL[0], PL[1] + 0.05, PL[2]), fi / 36.0)
-        kitty.tail(0.35 * math.sin(2 * math.pi * fi / 36))
+    for fi in range(int(os.environ.get('NFR', '48'))):
+        set_steam_phase(VOL[1], fi / 24.0)
+        kitty.tail(0.35 * math.sin(2 * math.pi * fi / 48)); kitty.blink([1, 0.4, 0.08, 0.4][fi - 30] if 30 <= fi < 34 else 1.0)
         shoot(os.path.join(D, f'f_{fi:04d}.png'))
 print('all done')
