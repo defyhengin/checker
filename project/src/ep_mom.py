@@ -70,6 +70,11 @@ plate(MP, 'mine', 0.12)
 M_FORK = simple_mat('fork', (0.75, 0.75, 0.77), 0.25, 1.0)
 box((MP[0] - 0.165, MP[1], MP[2] - 0.08), (MP[0] - 0.152, MP[1] + 0.005, MP[2] + 0.08), M_FORK, 'mine')
 
+# the cat (fed) on the table across from me, looking at me
+CATP = np.array((TXc + 0.02, 0.762, TZc + 0.24))
+kitty = Cat(CATP, yaw_to(CATP, (TXc, 0, TZc - 0.6), 0))
+kitty.tail(0.3)
+
 light('day', 'AREA', (TXc + 0.3, 2.3, TZc + 0.8), 60, (1.0, 0.95, 0.88), 2.0, (-0.2, -1, -0.5))
 light('warm', 'AREA', (1.2, 2.3, 1.9), 30, (1.0, 0.8, 0.58), 1.8, (0.6, -1, -0.4))
 EVE = ((0.06, 0.055, 0.055), 1.1)
@@ -91,9 +96,30 @@ else:
         cam((PH[0] - 0.04, 1.2, PH[2] - 0.42), (PH[0] - 0.04, 0.76, PH[2] - 0.02), 0.38)
         print('PH', screen_pos(np.array(PH)), 'MP', screen_pos(np.array(MP)), PH, MP)
         shoot(os.path.join(OUT, 'm1.png'))
+    if want('m3'):
+        EYE = np.array((TXc, 1.22, TZc - 0.62))
+        kitty.head(*kitty.look_angles(EYE))
+        state(['mine', 'phone', 'cat'], L, world=EVE, exp=0.1, phone=M_1)
+        cam(tuple(EYE), (TXc, 1.0, TZc + 0.1), 0.56)
+        shoot(os.path.join(OUT, 'm3.png'))
     for nm, mt in (('m2', M_1), ('m4', M_2)):
         if want(nm):
             state(['mine', 'phone'], L, world=EVE, exp=-0.2, phone=mt)
             cam((PH[0] - 0.005, 0.99, PH[2] - 0.045), (PH[0], 0.765, PH[2] + 0.004), 0.36)
             shoot(os.path.join(OUT, f'{nm}.png'))
+# MODE=turn: 30 honest frames (24 fps): the head turns from the phone (m2 view) up to the cat (m3 view); played backwards to turn back
+if MODE == 'turn':
+    M_1 = tex_mat('ph_mom_1t', 'phone_mom_1.png', 'top', 0.9, emit=1.8)
+    D = os.path.join(OUT, 'turn'); os.makedirs(D, exist_ok=True)
+    EYE = np.array((TXc, 1.22, TZc - 0.62))
+    kitty.head(*kitty.look_angles(EYE))
+    P0, G0, A0 = np.array((PH[0] - 0.005, 0.99, PH[2] - 0.045)), np.array((PH[0], 0.765, PH[2] + 0.004)), 0.36
+    P1, G1, A1 = EYE, np.array((TXc, 1.0, TZc + 0.1)), 0.56
+    state(['mine', 'phone', 'cat'], L, world=EVE, exp=-0.2, phone=M_1)
+    NF = 30
+    for fi in range(NF):
+        u = fi / (NF - 1); u = u * u * (3 - 2 * u)
+        sc.view_settings.exposure = -0.2 + 0.3 * u
+        cam(tuple(P0 + (P1 - P0) * u), tuple(G0 + (G1 - G0) * u), A0 + (A1 - A0) * u)
+        shoot(os.path.join(D, f'f_{fi:04d}.png'))
 print('all done')

@@ -41,4 +41,25 @@ for nm, lv in (('n2', 0.0), ('n3', 4.0)):
         cam((0.62, 1.5, 1.2), (2.4, 0.72, 1.8), 0.62)
         print('CAT', screen_pos(CATP + np.array((0, 0.3, 0))))
         shoot(os.path.join(OUT, f'{nm}.png'))
+# n4: open and dark, from the n1 camera (the hold after the opening)
+if want('n4'):
+    look(EYE)
+    state(['cat'], BASE, fr=105, fr_light=0.0, world=NIGHT, exp=EXP)
+    cam(tuple(EYE), (2.35, 0.72, 1.8), 0.62)
+    shoot(os.path.join(OUT, 'n4.png'))
+# MODE=anim: the door opens smoothly over 48 frames (24 fps, n1 camera); the lamp flickers and is dead by the time it is open
+if os.environ.get('MODE') == 'anim':
+    D = os.path.join(OUT, 'open'); os.makedirs(D, exist_ok=True)
+    sc.render.resolution_x, sc.render.resolution_y = 720, 1280
+    look(EYE)
+    cam(tuple(EYE), (2.35, 0.72, 1.8), 0.62)
+    NF = 48
+    ON = set(list(range(0, 7)) + [9, 10] + list(range(14, 19)) + [22, 26, 27, 31])   # flicker, ever rarer, dead from frame 32
+    for fi in range(NF):
+        u = fi / (NF - 1); u = u * u * (3 - 2 * u)
+        lv = 4.0 if fi in ON else 0.0
+        state(['cat'], BASE, fr=105 * u, fr_light=lv, fr_warm=0.0, world=NIGHT, exp=EXP)
+        if fi in ON:
+            LIGHTS['fr1'].hide_render = False; LIGHTS['fr2'].hide_render = False   # lit even when the door is barely open
+        shoot(os.path.join(D, f'f_{fi:04d}.png'))
 print('all done')

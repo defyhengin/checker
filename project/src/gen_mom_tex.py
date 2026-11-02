@@ -39,7 +39,7 @@ def chat(reply):
     if reply:
         y += 160
         rr(d, (400, y, 684, y + 150), 30, MINE)
-        d.text((436, y + 80), 'Еду.', font=f('SemiBold', 54), fill=WHITE, anchor='ls')
+        d.text((436, y + 80), 'Едем.', font=f('SemiBold', 54), fill=WHITE, anchor='ls')
         d.text((656, y + 130), '19:43 ✓✓', font=f('Regular', 26), fill=(170, 210, 180), anchor='rs')
     return im
 

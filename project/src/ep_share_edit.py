@@ -41,7 +41,7 @@ m.clink(T2 + 0.02, 0.025, 3400)                  # the kibble lands on the plate
 m.purr(T4 + 0.5, DUR, 0.32)
 m.save('share.wav')
 subs('share.ass', DUR, [(0.4, 2.7, "Тарелка пустая.", 'Box'), (3.3, 5.3, "Была.", 'Box'),
-                        (6.0, 8.2, "Одна рыбка.", 'Box'), (10.6, 16.3, "Кот ждёт, пока я доем.", 'Box')])
+                        (6.0, 8.2, "Одна рыбка.", 'Box'), (10.6, 16.3, "Поделился со мной и ждёт.", 'Box')])
 final('share_main.mp4', 'share.wav', 'share.ass', 'shorts_share.mp4', DUR)
 sheet('shorts_share.mp4', [1.0, 4.0, 7.0, 9.5, 11.5, 12.5, 13.5, 16.0], 'share_check.png')
 print('done')
