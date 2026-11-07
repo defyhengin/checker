@@ -4,7 +4,7 @@
 const fs = require('fs');
 require('./cards.js'); require('./captions.js');
 const C = globalThis.CARDS, P = globalThis.CAPTIONS;
-const EP = { obmanka: '1 «Обманка»', tumannik: '2 «Туманник»', podrazhatel: '3 «Подражатель»', mokhnach: '4 «Мохнач»', ulybyshi: '5 «Улыбыши»', tishka: '6 «Тишка»', zerkalnik: '7 «Зеркальник»', fonarnitsa: '8 «Фонарница»', pryatysh: '9 «Пряталки»', puzyryok: '10 «Пузырёк»', mokhovichki: '11 «Моховички»', lunoed: '12 «Луноед»' };
+const EP = { obmanka: '1 «Обманка»', tumannik: '2 «Туманник»', podrazhatel: '3 «Подражатель»', mokhnach: '4 «Мохнач»', ulybyshi: '5 «Улыбыши»', tishka: '6 «Тишка»', zerkalnik: '7 «Зеркальник»', fonarnitsa: '8 «Фонарница»', pryatysh: '9 «Пряталки»', puzyryok: '10 «Пузырёк»', mokhovichki: '11 «Моховички»', lunoed: '12 «Луноед»', zubochka: '13 «Зубочка»' };
 // что спрятано на странице - только для автора, в посты не идёт
 const ARG = {
   obmanka: 'Первая страница журнала. Пометка спокойная: наблюдатель ещё просто засекает время.',
@@ -20,6 +20,7 @@ const ARG = {
   mokhovichki: 'Морзе УХОДИ - в окне будки подделка превратила его в ОСТАНЬСЯ. Лист порос мхом (журнал лежал в болоте), из-под мха видна пометка «не засы…» (не засыпай). «не ложись» - а в 11-й серии он лежит под мхом.',
   lunoed: 'Последняя страница журнала: REC 03:10:58, за минуту до «Наблюдения №4». Морзе ГАСИ СВ… (гаси свет) - в окне будки подделка мигала ИДИ НА СВЕТ; угол страницы откушен прямо по слову. «экран», «не смотри на свет» - это уже про зрителя.',
 };
+ARG.zubochka = 'REC 02:14:37 - одна из ранних ночей (№ 12 остаётся последней страницей). Морзе НЕ СПИ - настоящее слово наблюдателя; в окне будки в 13-й серии подделка мигает СПИ (буквы слиты, ритм ровный, как колыбельная). «Утром у моей подушки лежал камушек» - он сам был у неё в гостях.';
 const rows = Object.entries(C).map(([id, c]) => ({ id, no: c.no, title: c.title, ep: EP[id], rec: c.rec, forged: !!c.forged, strike: `${c.strike} → ${c.strikeNote}`, note: c.note, morse: c.morse + (c.morseCode ? ' (сбой)' : c.bite ? '… (откушено)' : ''), sub: c.sub, facts: c.facts, caption: P[id] || '', arg: ARG[id] || '', img: `cards/${c.no}_${id}.jpg` }));
 
 const html = `<!DOCTYPE html>
