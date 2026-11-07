@@ -37,14 +37,16 @@
     return { h: lines.length * lh, hit };
   }
   // «от руки»: курсив с дрожанием, каждая буква немного своя
+  // подделка (forged): почерк слишком ровный - без дрожания и наклона букв
   function hand(ctx, text, x, y, size, color, rot = 0) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    const j = C.forged ? 0 : 1;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot * j);
     ctx.font = `italic 500 ${Math.round(size)}px "Lora"`; ctx.fillStyle = color;
     let cx = 0;
     [...text].forEach((ch, i) => {
-      ctx.save(); ctx.translate(cx, (U.hash(i, 11) - 0.5) * size * 0.08); ctx.rotate((U.hash(i, 12) - 0.5) * 0.1);
+      ctx.save(); ctx.translate(cx, (U.hash(i, 11) - 0.5) * size * 0.08 * j); ctx.rotate((U.hash(i, 12) - 0.5) * 0.1 * j);
       ctx.fillText(ch, 0, 0); ctx.restore();
-      cx += ctx.measureText(ch).width * (0.96 + 0.06 * U.hash(i, 13));
+      cx += ctx.measureText(ch).width * (C.forged ? 1 : 0.96 + 0.06 * U.hash(i, 13));
     });
     ctx.restore();
     return cx;
@@ -107,15 +109,57 @@
     pixelText(ctx, 'CAM-1', w - 16 * k, h - 48 * k, s, '#E9EEF8', 'right');
     ctx.restore();
   }
-  function morseMargin(ctx, word, x, y0) {
-    // наблюдатель карандашом рисует точки и тире на полях - столбиком
-    let y = y0;
+  function morseMargin(ctx, word, x, y0, codes) {
+    // наблюдатель карандашом рисует точки и тире на полях - столбиком.
+    // codes - свои коды по буквам (сбои подделки): 'L' - тире вдвое длиннее; пробел в слове - пауза между словами
+    let y = y0, li = 0;
     for (const ch of word) {
-      for (const s of (MORSE[ch] || '')) {
+      if (ch === ' ') { y += 34 * k; continue; }
+      const code = (codes && codes[li]) || MORSE[ch] || ''; li++;
+      for (const s of code) {
         if (s === '.') { ctx.fillStyle = 'rgba(40,40,50,0.6)'; ctx.beginPath(); ctx.arc(x, y, 3.2 * k, 0, 7); ctx.fill(); y += 14 * k; }
-        else { penLine(ctx, [[x - 1 * k, y - 4 * k], [x + 1 * k, y + 16 * k]], 'rgba(40,40,50,0.6)', 3.2, y | 0); y += 30 * k; }
+        else { const len = s === 'L' ? 42 : 20; penLine(ctx, [[x - 1 * k, y - 4 * k], [x + 1 * k, y + (len - 4) * k]], 'rgba(40,40,50,0.6)', 3.2, y | 0); y += (len + 10) * k; }
       }
       y += 22 * k;
+    }
+    return y;
+  }
+  // мох с моховичками поверх листа (11): под ним еле видна последняя настоящая пометка
+  function moss(ctx, nx, ny) {
+    if (C.mossNote) hand(ctx, C.mossNote, nx, ny, 46 * k, 'rgba(179,38,30,0.55)', -0.05);
+    const blobs = [[nx + 250, ny - 8, 66], [nx + 360, ny + 24, 84], [W * 0.06, H * 0.97, 120], [W * 0.98, H * 0.12, 80], [W * 0.95, H * 0.2, 50]];
+    blobs.forEach(([bx, by, r], b) => {
+      for (let i = 0; i < 40; i++) {
+        const a = U.hash(i, b * 7 + 1) * 6.28, d = Math.sqrt(U.hash(i, b * 7 + 2)) * r * k;
+        const x = bx + Math.cos(a) * d, y = by + Math.sin(a) * d * 0.75, rr = (9 + 14 * U.hash(i, b * 7 + 3)) * k;
+        ctx.fillStyle = ['#2E5A3A', '#3D7046', '#4C8250', '#24482F'][i % 4]; ctx.globalAlpha = 0.92;
+        ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // крошечные грибочки
+      for (let m = 0; m < 3; m++) {
+        const x = bx + (U.hash(m, b + 40) - 0.5) * r * k, y = by + (U.hash(m, b + 41) - 0.6) * r * 0.5 * k, s = (10 + 6 * U.hash(m, b + 42)) * k;
+        ctx.fillStyle = '#EDE3CF'; ctx.fillRect(x - s * 0.25, y - s * 0.2, s * 0.5, s * 1.1);
+        ctx.fillStyle = '#C9774E'; ctx.beginPath(); ctx.ellipse(x, y - s * 0.2, s, s * 0.6, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#F4E6D2'; ctx.beginPath(); ctx.arc(x - s * 0.35, y - s * 0.45, s * 0.14, 0, 7); ctx.arc(x + s * 0.3, y - s * 0.55, s * 0.12, 0, 7); ctx.fill();
+      }
+    });
+  }
+  // откушенный угол (12): полукруглые укусы, за листом темнота, рядом светящиеся крошки
+  function bite(ctx, cy) {
+    // край укуса как у печенья: большой круг из-за угла + зубчики по его краю
+    const cx0 = -90 * k, cy0 = (cy + 380) * k, R = 380 * k;
+    ctx.fillStyle = '#0A0D1C';
+    ctx.beginPath(); ctx.arc(cx0, cy0, R, 0, 7); ctx.fill();
+    for (let a = -1.7; a < 0.4; a += 0.16) {
+      ctx.beginPath(); ctx.arc(cx0 + Math.cos(a) * R, cy0 + Math.sin(a) * R, (24 + 6 * U.hash(a * 10 | 0, 64)) * k, 0, 7); ctx.fill();
+    }
+    // светящиеся крошки у края
+    for (let i = 0; i < 10; i++) {
+      const a = -1.6 + 1.9 * U.hash(i, 61), d = R + (30 + 70 * U.hash(i, 62)) * k;
+      const x = cx0 + Math.cos(a) * d, y = cy0 + Math.sin(a) * d, r = (2 + 4 * U.hash(i, 63)) * k;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, 'rgba(240,236,190,0.9)'); g.addColorStop(1, 'rgba(240,236,190,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - r * 4, y - r * 4, r * 8, r * 8);
     }
   }
 
@@ -179,7 +223,9 @@
       }
 
       // Морзе на полях карандашом
-      morseMargin(ctx, C.morse, 100 * k, py + ph + 40 * k);
+      const mEnd = morseMargin(ctx, C.morse, 100 * k, py + ph + 40 * k, C.morseCode);
+      if (C.moss) moss(ctx, L + 10 * k, H - 70 * k);
+      if (C.bite) bite(ctx, mEnd / k + 20);
     },
     post: { paper: 0.18, vignette: 0, grain: 0.045 },
   });
