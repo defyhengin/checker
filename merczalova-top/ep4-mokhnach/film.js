@@ -176,6 +176,47 @@
     }
   }
 
+  // ---------- последний экран: журнал камеры наблюдателя + глаз в темноте ----------
+  const pix = document.createElement('canvas');
+  function pixelText(ctx, text, cx, cy, scale, color) {
+    const fs = 11, px = pix.getContext('2d');
+    px.font = `bold ${fs}px monospace`;
+    const w = Math.ceil(px.measureText(text).width) + 4;
+    pix.width = w; pix.height = fs + 6;
+    px.font = `bold ${fs}px monospace`; px.textBaseline = 'top'; px.fillStyle = color;
+    px.fillText(text, 2, 2);
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(pix, Math.round(cx - (w * scale) / 2), Math.round(cy - (pix.height * scale) / 2), w * scale, pix.height * scale);
+    ctx.restore();
+  }
+  function endCard(ctx, t) {
+    const a = r01(t, ev.title + 0.3, ev.title + 0.6) * (1 - r01(t, S.DURATION - 0.5, S.DURATION));
+    if (a > 0) {
+      ctx.save(); ctx.globalAlpha = a;
+      const sc = Math.round(4 * k), y = H * 0.42 + 95 * k;
+      if (t < ev.title + 1.4) {
+        const secs = 47 + Math.floor(t - ev.title);
+        const dot = Math.floor((t - ev.title) * 2) % 2 === 0 ? '●' : ' ';
+        pixelText(ctx, `${dot} REC  03:12:${secs}`, W / 2, y, sc, '#C9D2E8');
+      } else if (Math.floor(t * 6) % 7 !== 0) {
+        pixelText(ctx, 'ЗАПИСЬ ПРЕРВАНА', W / 2, y, sc, '#C9D2E8');
+      }
+      ctx.restore();
+    }
+    // в темноте медленно открывается один глаз
+    const eT = ev.title + 0.9, o = ease.outQuad(r01(t, eT, eT + 0.5));
+    if (o > 0.02) {
+      const ex = W * 0.5, ey = H * 0.62, R = 30 * k;
+      G.ellipse(ctx, ex, ey, R, R * 0.7 * o, { fill: '#ECE5C6', lw: 2.5, seed: 1400, stroke: '#0B1A12' });
+      if (o > 0.35) {
+        ctx.fillStyle = '#6FCFD2'; ctx.beginPath(); ctx.ellipse(ex, ey, R * 0.45, R * 0.45 * o, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = '#05080A'; ctx.beginPath(); ctx.ellipse(ex, ey, R * 0.2, R * 0.26 * o, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(ex - R * 0.16, ey - R * 0.16, R * 0.09, 0, 7); ctx.fill();
+      }
+      glow(ctx, ex, ey, R * 3, '90,200,210', 0.22 * o);
+    }
+  }
+
   function cam(t) {
     const push = sm(t, S.T(2), ev.hide);          // «когда на него смотрят» — камера подъезжает
     const z = 1.3 + 0.6 * push + 0.4 * sm(t, ev.eye0, ev.blink);
@@ -203,7 +244,10 @@
       ctx.restore();
       if (t >= ev.breath && t < ev.eye0 + 0.3) { ctx.fillStyle = `rgba(4,6,16,${0.25 * r01(t, ev.breath, ev.breath + 0.4) * (1 - r01(t, ev.eye0, ev.eye0 + 0.3))})`; ctx.fillRect(0, 0, W, H); }
       if (t >= ev.cut) { ctx.fillStyle = '#030408'; ctx.fillRect(0, 0, W, H); }
-      Subs.draw(ctx, t, S.subtitles, { style: 'clean', size: Math.round(62 * k), y: H * 0.24, fam: 'Inter', maxW: W * 0.84, x: W * 0.5 });
+      const isTitle = (x) => x.text.startsWith('Наблюдение');
+      Subs.draw(ctx, t, S.subtitles.filter((x) => !isTitle(x)), { style: 'clean', size: Math.round(62 * k), y: H * 0.24, fam: 'Inter', maxW: W * 0.84, x: W * 0.5 });
+      if (t >= ev.cut) endCard(ctx, t);
+      Subs.draw(ctx, t, S.subtitles.filter(isTitle), { style: 'clean', size: Math.round(62 * k), y: H * 0.42, fam: 'Inter', maxW: W * 0.84, x: W * 0.5 });
     },
     post: { paper: 0.35, vignette: 0.5, grain: 0.06 },
   });
