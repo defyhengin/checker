@@ -190,27 +190,60 @@
     const nx = hx + o.look * 6 * s, ny = hy + 5 * s;
     ctx.fillStyle = '#D7708E'; ctx.beginPath(); ctx.ellipse(nx, ny, 2.4 * s, 1.8 * s, 0, 0, 7); ctx.fill();
     ctx.strokeStyle = 'rgba(40,30,40,0.5)'; ctx.lineWidth = 0.8 * s;
-    for (const d of [-1, 1]) for (const dy of [-1, 1.5]) { ctx.beginPath(); ctx.moveTo(nx + d * 4 * s, ny + dy * s); ctx.lineTo(nx + d * 16 * s, ny + dy * 2.5 * s); ctx.stroke(); }
+    const wx = o.smile ? 9 * s : 4 * s;
+    for (const d of [-1, 1]) for (const dy of [-1.5, 0.5]) { ctx.beginPath(); ctx.moveTo(nx + d * wx, ny + dy * s); ctx.lineTo(nx + d * (wx + 12 * s), ny + (dy * 2.5 - 1) * s); ctx.stroke(); }
     if (!o.smile) { ctx.fillStyle = 'rgba(235,140,160,0.35)'; for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(hx + d * 11 * s, hy + 5 * s, 3 * s, 1.8 * s, 0, 0, 7); ctx.fill(); } }
     // ротик: милая улыбка или улыбка из чужих зубов
-    const my = hy + 9 * s, mw = lerp(4, 11, o.smile || 0) * s;
+    const my = hy + lerp(9, 7.2, o.smile || 0) * s, mw = lerp(4, 12, o.smile || 0) * s;
     if (!o.smile) {
       ctx.strokeStyle = INK; ctx.lineWidth = 1.3 * s; ctx.beginPath(); ctx.arc(nx, my - 2 * s, 3.5 * s, 0.3, Math.PI - 0.3); ctx.stroke();
     } else {
-      const op = o.smile, mh = 5.5 * s * op;
-      ctx.fillStyle = '#2A0F18'; ctx.beginPath(); ctx.moveTo(nx - mw, my - 1 * s); ctx.quadraticCurveTo(nx, my + mh * 2.1, nx + mw, my - 1 * s); ctx.quadraticCurveTo(nx, my + mh * 0.5, nx - mw, my - 1 * s); ctx.fill();
-      // зубы разные: острые, человеческие, золотой
-      const n = SMILE.length;
-      for (let i = 0; i < n; i++) {
-        const p = (i + 0.5) / n, tx = nx - mw + p * mw * 2, ty = my - 0.5 * s + Math.sin(p * Math.PI) * mh * 0.55;
-        const kind = SMILE[i], tw = mw * 2 / n;
-        ctx.fillStyle = kind === 'g' ? '#E8C25A' : '#F4EFE2'; ctx.strokeStyle = 'rgba(70,60,50,0.7)'; ctx.lineWidth = 0.5 * s;
-        ctx.beginPath();
-        if (kind === 's') { ctx.moveTo(tx - tw * 0.45, ty); ctx.lineTo(tx, ty + 2.6 * s * op); ctx.lineTo(tx + tw * 0.45, ty); }
-        else if (kind === 'i') ctx.rect(tx - tw * 0.48, ty - 0.3 * s, tw * 0.96, 2.4 * s * op);
-        else { ctx.moveTo(tx - tw * 0.5, ty); ctx.lineTo(tx - tw * 0.5, ty + 1.9 * s * op); ctx.lineTo(tx, ty + 1.5 * s * op); ctx.lineTo(tx + tw * 0.5, ty + 1.9 * s * op); ctx.lineTo(tx + tw * 0.5, ty); }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+      // рот: верхняя губа почти прямая, нижняя - глубокая дуга; зубы растут из губ и обрезаны по форме рта
+      const op = o.smile, up = 1.6 * s, low = 6.8 * s * op;
+      const P0 = [nx - mw, my - 1 * s], P2 = [nx + mw, my - 1 * s];
+      const qp = (c, p) => [(1 - p) * (1 - p) * P0[0] + 2 * p * (1 - p) * c[0] + p * p * P2[0], (1 - p) * (1 - p) * P0[1] + 2 * p * (1 - p) * c[1] + p * p * P2[1]];
+      const qt = (c, p) => Math.atan2(2 * (1 - p) * (c[1] - P0[1]) + 2 * p * (P2[1] - c[1]), 2 * (1 - p) * (c[0] - P0[0]) + 2 * p * (P2[0] - c[0]));
+      const CU = [nx, my - 1 * s + up], CL = [nx, my - 1 * s + low * 2];
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(P0[0], P0[1]); ctx.quadraticCurveTo(CU[0], CU[1], P2[0], P2[1]); ctx.quadraticCurveTo(CL[0], CL[1], P0[0], P0[1]); ctx.closePath();
+      const mg = ctx.createLinearGradient(0, my, 0, my + low * 1.2); mg.addColorStop(0, '#3A1420'); mg.addColorStop(1, '#12060A');
+      ctx.fillStyle = mg; ctx.fill();
+      ctx.clip();
+      // язычок в глубине
+      ctx.fillStyle = '#8A3A4E'; ctx.beginPath(); ctx.ellipse(nx, my + low * 0.95, mw * 0.45, low * 0.35, 0, 0, 7); ctx.fill();
+      // зуб: f - форма, w - ширина, h - длина, dir 1 вниз (верхний ряд), -1 вверх (нижний)
+      const tooth = (x, y, ang, w, h, kind, dir) => {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(1, dir);
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        if (kind === 'g') { g.addColorStop(0, '#F3D27A'); g.addColorStop(1, '#B98A2C'); }
+        else { g.addColorStop(0, '#FBF7EC'); g.addColorStop(1, kind === 'm' ? '#D9CDB4' : '#E6DCC6'); }
+        ctx.fillStyle = g; ctx.beginPath();
+        if (kind === 's') { ctx.moveTo(-w / 2, -1 * s); ctx.quadraticCurveTo(-w * 0.15, h * 0.6, 0, h); ctx.quadraticCurveTo(w * 0.15, h * 0.6, w / 2, -1 * s); }
+        else if (kind === 'i') { ctx.moveTo(-w / 2, -1 * s); ctx.lineTo(-w * 0.46, h * 0.85); ctx.quadraticCurveTo(0, h * 1.05, w * 0.46, h * 0.85); ctx.lineTo(w / 2, -1 * s); }
+        else { ctx.moveTo(-w / 2, -1 * s); ctx.lineTo(-w * 0.5, h * 0.7); ctx.quadraticCurveTo(-w * 0.25, h * 0.95, 0, h * 0.78); ctx.quadraticCurveTo(w * 0.25, h * 0.95, w * 0.5, h * 0.7); ctx.lineTo(w / 2, -1 * s); }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(60,40,30,0.55)'; ctx.lineWidth = 0.35 * s; ctx.stroke();
+        ctx.restore();
+      };
+      // нижний ряд - мелкие острые, видны наполовину
+      const NL = 8;
+      for (let i = 0; i < NL; i++) {
+        const p = 0.08 + 0.84 * (i + 0.5) / NL, [x, y] = qp(CL, p), c = 1 - 0.4 * Math.abs(2 * p - 1);
+        tooth(x, y + 0.5 * s, qt(CL, p) + Math.PI, (mw * 2 / NL) * 0.95 * c, 3.2 * s * c * op, i === 4 ? 'm' : 's', 1);
       }
+      // десна и верхний ряд: разные зубы, крупнее к центру
+      ctx.strokeStyle = '#B0566C'; ctx.lineWidth = 2.4 * s;
+      ctx.beginPath(); ctx.moveTo(P0[0], P0[1]); ctx.quadraticCurveTo(CU[0], CU[1], P2[0], P2[1]); ctx.stroke();
+      const NU = SMILE.length;
+      for (let i = 0; i < NU; i++) {
+        const p = (i + 0.5) / NU, [x, y] = qp(CU, p), c = 1 - 0.45 * Math.abs(2 * p - 1);
+        const kind = SMILE[i], len = (kind === 's' ? 5.2 : kind === 'i' ? 4.6 : 3.8) * s * c * (0.4 + 0.6 * op);
+        tooth(x, y + 0.6 * s, qt(CU, p), (mw * 2 / NU) * 1.02 * c, len, kind, 1);
+      }
+      ctx.restore();
+      // губы
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.3 * s;
+      ctx.beginPath(); ctx.moveTo(P0[0], P0[1]); ctx.quadraticCurveTo(CU[0], CU[1], P2[0], P2[1]); ctx.quadraticCurveTo(CL[0], CL[1], P0[0], P0[1]); ctx.stroke();
     }
     // лапки и фонарик-светлячок
     const lx = x - 17 * s, ly = y + 2 * s;
