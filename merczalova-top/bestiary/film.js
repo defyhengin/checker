@@ -1,4 +1,4 @@
-// Карточка бестиария «Мерцаловой топи» — страница из журнала наблюдателя (1080×1350).
+// Карточка бестиария «Мерцаловой топи» - страница из журнала наблюдателя (1080×1350).
 // Тетрадный лист в клетку, распечатка с камеры на скотче, машинопись рассказчика, пометки наблюдателя ручкой.
 (function () {
   const U = globalThis.U, G = globalThis.G, Studio = globalThis.Studio;
@@ -10,7 +10,7 @@
   let IMG = null;
   const MORSE = { А: '.-', Б: '-...', В: '.--', Г: '--.', Д: '-..', Е: '.', Ж: '...-', З: '--..', И: '..', Й: '.---', К: '-.-', Л: '.-..', М: '--', Н: '-.', О: '---', П: '.--.', Р: '.-.', С: '...', Т: '-', У: '..-', Ф: '..-.', Х: '....', Ц: '-.-.', Ч: '---.', Ш: '----', Щ: '--.-', Ы: '-.--', Ь: '-..-', Э: '..-..', Ю: '..--', Я: '.-.-' };
 
-  // машинопись: каждая буква чуть своя — неровный оттиск
+  // машинопись: каждая буква чуть своя - неровный оттиск
   function typeText(ctx, text, x, y, size, opts = {}) {
     ctx.font = `${opts.bold ? 'bold ' : ''}${Math.round(size)}px ${TW}`;
     const marks = {}; let cx = x;
@@ -108,7 +108,7 @@
     ctx.restore();
   }
   function morseMargin(ctx, word, x, y0) {
-    // наблюдатель карандашом рисует точки и тире на полях — столбиком
+    // наблюдатель карандашом рисует точки и тире на полях - столбиком
     let y = y0;
     for (const ch of word) {
       for (const s of (MORSE[ch] || '')) {
@@ -140,7 +140,7 @@
       const tEnd = typeText(ctx, C.title.toUpperCase(), L, y, 70 * k, { bold: true, sp: 6 * k });
       ctx.fillStyle = TYPE; ctx.globalAlpha = 0.8; ctx.fillRect(L, y + 14 * k, tEnd - L, 3 * k); ctx.globalAlpha = 1;
 
-      // вступление: «Милый…» — наблюдатель зачёркивает
+      // вступление: «Милый…» - наблюдатель зачёркивает
       y += 96 * k;
       const fs = 31 * k, lh = 44 * k, maxW = R - L;
       typeText(ctx, C.intro, L, y, fs);
@@ -156,7 +156,7 @@
       // факты
       let circ = null;
       for (const f of C.facts) {
-        typeText(ctx, '—', L, y, fs);
+        typeText(ctx, '-', L, y, fs);
         const r = typeWrapped(ctx, f, L + 40 * k, y, fs, maxW - 40 * k, lh, C.circle);
         if (r.hit) circ = r.hit;
         y += r.h + 12 * k;
@@ -167,7 +167,7 @@
         const cx = circ.x + circ.w / 2, cy = circ.y - 10 * k, rx = circ.w / 2 + 16 * k, ry = 30 * k;
         const pts = []; for (let i = 0; i <= 26; i++) { const a = -0.4 + (i / 24) * Math.PI * 2; pts.push([cx + Math.cos(a) * rx * (1 + 0.04 * Math.sin(i)), cy + Math.sin(a) * ry]); }
         penLine(ctx, pts, RED, 3.6, 51);
-        // стрелка уходит вправо на поля и вниз, пометка — под фактами
+        // стрелка уходит вправо на поля и вниз, пометка - под фактами
         ctx.font = `italic 500 ${Math.round(50 * k)}px "Lora"`;
         const nw0 = ctx.measureText(C.note).width;
         const ex = W - 34 * k, ny = Math.max(y + 40 * k, H - 70 * k), nx = R - nw0 - 30 * k;
