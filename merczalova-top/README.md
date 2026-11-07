@@ -7,5 +7,5 @@
 - `PUBLISHING.md` — профиль, названия, описания, теги и хэштеги серий для YouTube и TikTok.
 - `brand/` — аватарка и шапка YouTube.
 - `engine/` — движок навыка animation-studio (общий для всех серий).
-- `ep1-obmanka/`, `ep2-tumannik/`, `ep3-podrazhatel/`, `ep4-mokhnach/`, `ep5-ulybyshi/` — партитура, звук, картинка и озвучка каждой серии.
+- `ep1-obmanka/`, `ep2-tumannik/`, `ep3-podrazhatel/`, `ep4-mokhnach/`, `ep5-ulybyshi/`, `ep6-tishka/` — партитура, звук, картинка и озвучка каждой серии.
 - `arg-pixel-test.py` — пробный пиксель-арт для будущего ARG-слоя.
