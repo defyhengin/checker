@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мерцалова топь — тексты для публикации</title>
+<style>
+  :root{--bg:#0B1030;--card:#16224A;--line:#25325C;--txt:#E8ECF7;--mut:#9AA6C8;--warm:#FFC874;--glow:#5AC8D2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:14px 12px 60px}
+  h1{font-size:20px;margin:4px 0 2px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;position:sticky;top:0;background:var(--bg);z-index:2;padding-top:6px}
+  .tab{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:999px;padding:8px 13px;font-size:14px}
+  .tab.on{background:var(--warm);color:#1a1300;border-color:var(--warm);font-weight:600}
+  .ep-head{margin:14px 0 4px;font-size:18px}
+  .status{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--line);color:var(--mut);margin-left:6px;vertical-align:middle}
+  .status.ok{background:#1E4A47;color:#BFF3EC}
+  .plat{margin:16px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--glow)}
+  .field{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+  .label{color:var(--mut);font-size:13px}
+  .val{white-space:pre-wrap;word-break:break-word;font-size:14.5px}
+  button.copy{border:0;border-radius:8px;background:var(--line);color:var(--txt);padding:7px 12px;font-size:13px;min-width:92px}
+  button.copy.done{background:#1E4A47;color:#BFF3EC}
+  .note{color:var(--mut);font-size:13px;margin:6px 2px}
+  .empty{color:var(--mut);font-style:italic}
+</style>
+</head>
+<body>
+<h1>🌙 Мерцалова топь</h1>
+<div class="sub">Тексты для выкладки. Нажми «Копировать» и вставь в приложение.</div>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+
+<script>
+// ===== ДАННЫЕ: при новой серии добавляется новый объект =====
+const DATA = [
+ { id:"profile", tab:"Профиль", title:"Профиль канала", status:"", platforms:[
+   {name:"Оба сервиса", fields:[
+     ["Название","Мерцалова топь"],
+     ["Ник","@mercalova_top"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Описание профиля","Документалка о милых существах ночного болота. Милых ли? 🌙"],
+     ["Закреп в профиле","Серии 1–3 по порядку"],
+   ]},
+   {name:"YouTube", fields:[
+     ["Описание канала","Мерцалова топь — анимационная документалка о существах ночного болота.\n\nСпокойный голос рассказчика нежно знакомит вас с местными обитателями: светящейся кувшинкой, пугливым туманником, зверьком, который повторяет всё, что слышит. Они очень милые. До последней секунды.\n\nКороткие мультфильмы-страшилки: мило-жуткие истории без крови, с загадками. Смотрите внимательно — в каждой серии спрятано что-то ещё.\n\nНовые наблюдения — в Shorts."],
+     ["Ключевые слова канала","мерцалова топь, анимация, мультфильм, страшилки, крипи, мини хоррор, документалка, существа, болото, анимационные шортсы"],
+     ["Настройки","Категория «Фильмы и анимация» · «Не для детей»"],
+   ]},
+ ]},
+ { id:"ep1", tab:"1 · Обманка", title:"Серия 1 — «Обманка»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Эта кувшинка растёт не из дна | Мерцалова топь #анимация #страшилки #shorts"],
+     ["Описание","Лунная кувшинка — самый гостеприимный цветок Мерцаловой топи. Светлячки летят к ней со всей округи…\n\n#анимация #страшилки #shorts #мерцаловатопь #крипи"],
+     ["Теги","кувшинка, мерцалова топь, анимация, страшилка, мультфильм страшилка, крипи, мини хоррор, документалка о природе, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Лунная кувшинка с Мерцаловой топи: милый цветок, к которому летят светлячки 🌙 Досмотри до конца. Сколько светлячков было в начале? #мерцаловатопь #анимация #страшилки #крипи #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Сколько светлячков улетело обратно? 🌙"],
+   ]},
+ ]},
+ { id:"ep2", tab:"2 · Туманник", title:"Серия 2 — «Туманник»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Его видно только краем глаза | Мерцалова топь #анимация #крипи #shorts"],
+     ["Описание","Туманник очень пуглив: стоит на него посмотреть, и он исчезает. Поэтому увидеть его можно только краем глаза…\n\n#анимация #крипи #shorts #мерцаловатопь #страшилки"],
+     ["Теги","туманник, краем глаза, мерцалова топь, анимация, страшилка, крипи, мини хоррор, туман, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Туманник: существо, которое видно только краем глаза 🌫 Он никогда не приближается. Наверное. Ты заметил, где он стоял в последний раз? #мерцаловатопь #анимация #крипи #страшилки #туман"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Где он стоял в последний раз? 🌫"],
+   ]},
+ ]},
+ { id:"ep3", tab:"3 · Подражатель", title:"Серия 3 — «Подражатель»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Он повторяет всё, что слышит. Даже голос | Мерцалова топь #анимация #страшилки #shorts"],
+     ["Описание","Подражатель — крошечный зверёк Мерцаловой топи. Кваканье лягушки, жужжание светлячка, даже колыбельная — он повторяет всё, что слышит…\n\n#анимация #страшилки #shorts #мерцаловатопь #крипи"],
+     ["Теги","подражатель, мерцалова топь, анимация, страшилка, крипи, мини хоррор, повторяет голос, мультфильм, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Подражатель: милый зверёк, который повторяет всё, что слышит 🐸 Даже колыбельную. Даже голос. Пересмотри и следи за его ртом 👀 #мерцаловатопь #анимация #страшилки #крипи #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Кто-нибудь заметил, что у него с ртом? 👀"],
+   ]},
+ ]},
+ { id:"ep4", tab:"4 · Мохнач", title:"Серия 4 — «Мохнач»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Самое застенчивое существо болота | Мерцалова топь #анимация #крипи #shorts"],
+     ["Описание","Мохнач — самое застенчивое существо Мерцаловой топи. Стоит на него посмотреть, и он прячет мордочку…\n\n#анимация #крипи #shorts #мерцаловатопь #страшилки"],
+     ["Теги","мохнач, застенчивое существо, мерцалова топь, анимация, страшилка, крипи, мини хоррор, мультфильм, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Мохнач — самое застенчивое существо Мерцаловой топи 🌿 Он прячет мордочку, когда на него смотрят. Ты бы смог на него не смотреть? #мерцаловатопь #анимация #крипи #страшилки #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Он правда отвернулся? 🌿"],
+   ]},
+ ]},
+ { id:"ep5", tab:"5 · Улыбыши", title:"Серия 5 — «Улыбыши»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Самые счастливые малыши болота | Мерцалова топь #анимация #страшилки #shorts"],
+     ["Описание","Улыбыши — самые счастливые малыши Мерцаловой топи. Они улыбаются, когда играют, и улыбаются, когда спят…\n\n#анимация #страшилки #shorts #мерцаловатопь #крипи"],
+     ["Теги","улыбыши, улыбка, мерцалова топь, анимация, страшилка, крипи, мини хоррор, мультфильм, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Улыбыши — самые счастливые малыши Мерцаловой топи 😊 Они улыбаются всегда. Совсем всегда. А ты бы улыбнулся в ответ? #мерцаловатопь #анимация #страшилки #крипи #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Сколько их было на кувшинке? 🌙"],
+   ]},
+ ]},
+ { id:"ep6", tab:"6 · Тишка", title:"Серия 6 — «Тишка»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Самый тихий житель болота | Мерцалова топь #анимация #крипи #shorts"],
+     ["Описание","Тишка — самый тихий житель Мерцаловой топи. Там, где он проходит, замолкают лягушки и затихает ветер…\n\n#анимация #крипи #shorts #мерцаловатопь #страшилки"],
+     ["Теги","тишка, тишина, мерцалова топь, анимация, страшилка, крипи, мини хоррор, мультфильм, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Тишка — самый тихий житель Мерцаловой топи 🤫 Он очень любит тишину. Смотри со звуком. #мерцаловатопь #анимация #крипи #страшилки #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","…а что он хотел сказать? 🤫"],
+   ]},
+ ]},
+ { id:"ep7", tab:"7 · Зеркальник", title:"Серия 7 — «Зеркальник»", status:"готово", platforms:[
+   {name:"YouTube Shorts", fields:[
+     ["Название","Его видно только в отражении | Мерцалова топь #анимация #крипи #shorts"],
+     ["Описание","Зеркальник — самый скромный житель Мерцаловой топи. Над водой его никогда не видно, только в отражении…\n\n#анимация #крипи #shorts #мерцаловатопь #страшилки"],
+     ["Теги","зеркальник, отражение, мерцалова топь, анимация, страшилка, крипи, мини хоррор, мультфильм, существа болота, shorts"],
+   ]},
+   {name:"TikTok", fields:[
+     ["Подпись","Зеркальник — самый скромный житель Мерцаловой топи 🪞 Над водой его не видно. Только в отражении. Ты сейчас не оборачивался? #мерцаловатопь #анимация #крипи #страшилки #мультик"],
+   ]},
+   {name:"Закреп-комментарий (оба)", fields:[
+     ["Комментарий","Сколько ног было у штатива? 🪞"],
+   ]},
+ ]},
+];
+
+// ===== ОТРИСОВКА =====
+const tabs=document.getElementById('tabs'), view=document.getElementById('view');
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function show(id){
+  const ep=DATA.find(e=>e.id===id)||DATA[1];
+  [...tabs.children].forEach(b=>b.classList.toggle('on',b.dataset.id===ep.id));
+  let h=`<div class="ep-head">${esc(ep.title)}${ep.status?`<span class="status ${ep.status==='готово'?'ok':''}">${ep.status}</span>`:''}</div>`;
+  if(ep.note) h+=`<div class="note">${esc(ep.note)}</div>`;
+  ep.platforms.forEach(p=>{
+    h+=`<div class="plat">${esc(p.name)}</div>`;
+    p.fields.forEach(([l,v])=>{
+      h+=`<div class="field"><div class="row"><span class="label">${esc(l)}</span>`+
+        (v?`<button class="copy" data-v="${encodeURIComponent(v)}">Копировать</button>`:'')+
+        `</div><div class="val ${v?'':'empty'}">${v?esc(v):'пока нет'}</div></div>`;
+    });
+  });
+  view.innerHTML=h;
+  try{localStorage.setItem('mt_tab',ep.id)}catch(e){}
+  if(location.hash!=='#'+ep.id) history.replaceState(null,'','#'+ep.id);
+}
+DATA.forEach(e=>{const b=document.createElement('button');b.className='tab';b.textContent=e.tab;b.dataset.id=e.id;b.onclick=()=>show(e.id);tabs.appendChild(b)});
+view.addEventListener('click',async ev=>{
+  const b=ev.target.closest('button.copy'); if(!b) return;
+  const v=decodeURIComponent(b.dataset.v);
+  let ok=false;
+  try{await navigator.clipboard.writeText(v);ok=true}catch(e){
+    const t=document.createElement('textarea');t.value=v;document.body.appendChild(t);t.select();
+    try{ok=document.execCommand('copy')}catch(_){}
+    t.remove();
+  }
+  b.textContent=ok?'Скопировано ✓':'Выдели текст';b.classList.toggle('done',ok);
+  setTimeout(()=>{b.textContent='Копировать';b.classList.remove('done')},1600);
+});
+window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+let start=location.hash.slice(1);
+if(!start){try{start=localStorage.getItem('mt_tab')}catch(e){}}
+show(start||'ep1');
+</script>
+</body>
+</html>
