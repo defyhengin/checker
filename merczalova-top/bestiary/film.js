@@ -148,7 +148,7 @@
   // откушенный угол (12): полукруглые укусы, за листом темнота, рядом светящиеся крошки
   function bite(ctx, cy) {
     // край укуса как у печенья: большой круг из-за угла + зубчики по его краю
-    const cx0 = -90 * k, cy0 = (cy + 380) * k, R = 380 * k;
+    const cx0 = -110 * k, cy0 = (cy + 300) * k, R = 280 * k;
     ctx.fillStyle = '#0A0D1C';
     ctx.beginPath(); ctx.arc(cx0, cy0, R, 0, 7); ctx.fill();
     for (let a = -1.7; a < 0.4; a += 0.16) {
@@ -225,7 +225,7 @@
       // Морзе на полях карандашом
       const mEnd = morseMargin(ctx, C.morse, 100 * k, py + ph + 40 * k, C.morseCode);
       if (C.moss) moss(ctx, L + 10 * k, H - 70 * k);
-      if (C.bite) bite(ctx, mEnd / k + 20);
+      if (C.bite) bite(ctx, Math.max(mEnd / k + 20, 1150));
     },
     post: { paper: 0.18, vignette: 0, grain: 0.045 },
   });
