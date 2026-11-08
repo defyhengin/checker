@@ -68,7 +68,7 @@
   // ---------- окно: свет монитора, силуэт, поддельное «ОТКРОЙ» ----------
   function boothWindow(ctx, t) {
     const { x, y, w, h } = WIN;
-    const lit = r01(t, ev.reveal, ev.reveal + 0.15) * (1 - r01(t, ev.shut, ev.shut + 0.08));
+    const lit = (t >= ev.reveal ? 1 : 0) * (1 - r01(t, ev.shut, ev.shut + 0.08));
     const lamp = t >= ev.morse && t < ev.shut ? S.morseOn(t) : 0;
     ctx.fillStyle = '#0D0F18'; ctx.fillRect(x - w / 2, y - h / 2, w, h);
     if (lit > 0) {
