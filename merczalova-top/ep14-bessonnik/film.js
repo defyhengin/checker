@@ -145,23 +145,56 @@
       }
     }
   }
+  // Мохнач со спины - как в 4-й серии: те же 24 глаза на тех же местах (раскладка без наложений, seed 404)
+  const MOSS_M = '#3E6B4A', MOSS_D = '#22402E', MOSS_L = '#6A9A5E', INK_M = '#0B1A12';
   const MEYES = [];
-  for (let i = 0; i < 24; i++) MEYES.push([(U.hash(i, 810) - 0.5) * 1.5, -0.15 - 0.7 * U.hash(i, 811), 0.6 + 0.5 * U.hash(i, 812), U.hash(i, 813)]);
-  function mokhnach(ctx, x, y, s, turn, t) {
-    const S2 = s * k;
-    G.ellipse(ctx, x, y, 110 * S2, 80 * S2, { fill: '#3F6E5C', lw: 3.5, seed: 820, stroke: INK, hatch: { color: 'rgba(10,30,20,0.4)', gap: 6, angle: -0.8 } });
-    for (let i = 0; i < 26; i++) {
-      const a = Math.PI + (i / 25) * Math.PI, rx = 110 * S2, ry = 80 * S2;
-      G.line(ctx, [[x + Math.cos(a) * rx, y + Math.sin(a) * ry], [x + Math.cos(a) * (rx + 12 * S2), y + Math.sin(a) * (ry + 14 * S2)]], { color: '#2C5646', lw: 5 * S2, seed: 830 + i });
+  {
+    const rnd = U.mulberry32(404);
+    let tries = 0;
+    while (MEYES.length < 24 && tries < 4000) {
+      tries++;
+      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 0.86;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r * 0.95 - 0.05;
+      const sz = 0.55 + rnd() * 0.6;
+      if (MEYES.every((e) => Math.hypot(e.x - x, (e.y - y) * 1.1) > (e.s + sz) * 0.15)) MEYES.push({ x, y, s: sz });
     }
-    // 24 глаза на спине: открываются по одному
-    MEYES.forEach(([ex, ey, es, ph], i) => {
-      const o = clamp((turn * 1.6) - ph * 0.6);
-      if (o <= 0) { ctx.strokeStyle = 'rgba(8,20,16,0.8)'; ctx.lineWidth = 2 * S2; ctx.beginPath(); ctx.arc(x + ex * 88 * S2, y + ey * 66 * S2, 9 * es * S2, 0.3, Math.PI - 0.3); ctx.stroke(); return; }
-      const px = x + ex * 88 * S2, py = y + ey * 66 * S2, r = 10 * es * S2;
-      ctx.fillStyle = '#F2EEDC'; ctx.beginPath(); ctx.ellipse(px, py, r, r * o, 0, 0, 7); ctx.fill();
-      ctx.strokeStyle = INK; ctx.lineWidth = 1.5 * S2; ctx.stroke();
-      ctx.fillStyle = '#07090A'; ctx.beginPath(); ctx.arc(px, py, r * 0.42 * o, 0, 7); ctx.fill();
+    // открываются от центра к краям
+    MEYES.forEach((e) => (e.d = Math.hypot(e.x, e.y)));
+    MEYES.slice().sort((p, q2) => p.d - q2.d).forEach((e, i) => (e.ph = i / 23));
+  }
+  function mokhnach(ctx, x, y, s, turn, t) {
+    const RX = 150 * k * s * 0.72, RY = 118 * k * s * 0.72, br = 1 + 0.018 * Math.sin(t * 2.1);
+    const rx = RX, ry = RY * br, by = y + (1 - br) * RY;
+    for (let i = 0; i < 16; i++) {
+      const a = Math.PI * (0.08 + 0.84 * (i / 15)), xx = x - Math.cos(a) * rx * 0.98;
+      const y0 = by + Math.sin(a) * ry * 0.55, len = (20 + 24 * U.hash(i, 900)) * k * s * 0.72;
+      G.line(ctx, [[xx, y0], [xx + (U.hash(i, 901) - 0.5) * 10 * k, y0 + len]], { color: MOSS_D, lw: 5 * k, seed: 900 + i });
+    }
+    G.ellipse(ctx, x, by, rx, ry, { fill: MOSS_M, lw: 4, seed: 951, stroke: INK_M, hatch: { color: 'rgba(8,30,16,0.35)', gap: 7, angle: -0.7 } });
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI * (1.12 + 0.76 * (i / 8)), r = (26 + 12 * U.hash(i, 960)) * k * s * 0.72;
+      G.ellipse(ctx, x + Math.cos(a) * rx * 0.86, by + Math.sin(a) * ry * 0.86, r, r * 0.8, { fill: i % 2 ? MOSS_L : MOSS_M, lw: 3, seed: 980 + i, stroke: INK_M });
+    }
+    G.line(ctx, [[x, by - ry * 0.9], [x + 6 * k, by], [x, by + ry * 0.6]], { color: MOSS_D, lw: 6 * k, seed: 1100 });
+    G.line(ctx, [[x + 40 * k * s * 0.72, by - ry * 0.9], [x + 40 * k * s * 0.72, by - ry * 0.9 - 14 * k]], { color: '#D8CDB0', lw: 4 * k, seed: 992 });
+    G.ellipse(ctx, x + 40 * k * s * 0.72, by - ry * 0.9 - 16 * k, 12 * k, 7 * k, { fill: '#B8644A', lw: 2.5, seed: 993, stroke: INK_M });
+    MEYES.forEach((e, i) => {
+      const ex = x + e.x * rx * 0.82, ey = by + e.y * ry * 0.82, R = e.s * 24 * k * s * 0.72;
+      const st = e.ph * 0.75, o = turn <= st ? 0 : ease.outBack(clamp((turn - st) / 0.12), 1.6);
+      if (o <= 0.02) {
+        G.line(ctx, [[ex - R * 0.8, ey], [ex, ey + R * 0.25], [ex + R * 0.8, ey]], { color: 'rgba(10,30,18,0.55)', lw: 2.5 * k, seed: 1200 + i });
+        return;
+      }
+      G.ellipse(ctx, ex, ey, R, R * 0.72 * o, { fill: '#ECE5C6', lw: 2.5, seed: 1300 + i, stroke: INK_M });
+      if (o > 0.35) {
+        // все зрачки - в камеру
+        const lx = clamp((W * 0.5 - ex) / (W * 0.8), -0.35, 0.35) + U.noise1(t * 2 + i, 7) * 0.06;
+        const ix = ex + lx * R * 0.6, iy = ey - 0.1 * R * 0.4;
+        ctx.fillStyle = '#6FCFD2'; ctx.beginPath(); ctx.ellipse(ix, iy, R * 0.45, R * 0.45 * Math.min(1, o), 0, 0, 7); ctx.fill();
+        ctx.fillStyle = '#05080A'; ctx.beginPath(); ctx.ellipse(ix, iy, R * 0.2, R * 0.26 * Math.min(1, o), 0, 0, 7); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(ix - R * 0.16, iy - R * 0.16, R * 0.09, 0, 7); ctx.fill();
+      }
+      glow(ctx, ex, ey, R * 2.6, COLD, 0.16 * Math.min(1, o));
     });
   }
   // улыбки в темноте камышей
@@ -180,9 +213,9 @@
   }
   function reedsFront(ctx, t, half) {
     for (let i = half; i < 22; i += 2) {
-      const side = (i >> 1) % 2 ? 1 : -1, xx = side < 0 ? U.hash(i, 61) * W * 0.34 : W - U.hash(i, 61) * W * 0.34;
+      const side = (i >> 1) % 2 ? 1 : -1, spread = half ? 0.1 : 0.34, xx = side < 0 ? U.hash(i, 61) * W * spread : W - U.hash(i, 61) * W * spread;
       const base = H * (0.96 + 0.06 * U.hash(i, 62)), h = (0.22 + 0.2 * U.hash(i, 63)) * H;
-      const sway = Math.sin(t * 0.9 + i) * 8 * k, lean = side * (-0.1 - 0.15 * U.hash(i, 64)) * h;
+      const sway = Math.sin(t * 0.9 + i) * 8 * k, lean = side * (-0.1 - 0.15 * U.hash(i, 64)) * h * (half ? 0.25 : 1);
       G.line(ctx, [[xx, base], [xx + lean * 0.5 + sway * 0.5, base - h * 0.5], [xx + lean + sway, base - h]], { color: '#04060E', lw: (9 + 8 * U.hash(i, 65)) * k, seed: 900 + i });
       if (i % 4 === 0) G.ellipse(ctx, xx + lean + sway, base - h, 8 * k, 24 * k, { fill: '#160F0A', lw: 2, seed: 930 + i, stroke: '#04060E' });
     }
