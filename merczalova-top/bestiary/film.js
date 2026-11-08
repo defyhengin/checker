@@ -320,6 +320,26 @@
       tape(ctx, tx, ty, -0.35, 120);
       if (C.tooth.label) hand(ctx, C.tooth.label, tx - 150 * k, ty + 82 * k, 30 * k, PENCIL, -0.05);
     }
+    // 16: столбик температур ручкой - куртка теплеет, «я» остывает, последняя цифра не дописана
+    if (C.temps) {
+      const x0 = o.px + o.pw - 300 * k, y0 = o.py + o.ph - 210 * k, rh = 44 * k;
+      ctx.save(); ctx.fillStyle = 'rgba(242,238,227,0.9)';
+      ctx.translate(x0, y0); ctx.rotate(-0.04);
+      ctx.fillRect(-20 * k, -50 * k, 300 * k, 50 * k + rh * C.temps.length + 20 * k);
+      ctx.restore();
+      hand(ctx, 'кур.', x0 + 20 * k, y0 - 12 * k, 32 * k, PEN, -0.04);
+      hand(ctx, 'я', x0 + 170 * k, y0 - 18 * k, 32 * k, PEN, -0.04);
+      penLine(ctx, [[x0 - 4 * k, y0], [x0 + 260 * k, y0 - 10 * k]], PEN, 2.4, 71);
+      penLine(ctx, [[x0 + 128 * k, y0 - 44 * k], [x0 + 136 * k, y0 + rh * C.temps.length]], PEN, 2.4, 72);
+      C.temps.forEach(([a, b], i) => {
+        const yy = y0 + (i + 0.8) * rh - i * 2.5 * k, last = i === C.temps.length - 1;
+        hand(ctx, a, x0 + 10 * k, yy, 34 * k, last ? RED : PEN, -0.04 + i * 0.015);
+        hand(ctx, b, x0 + 162 * k, yy + i * 1.5 * k, 34 * k, last ? RED : PEN, -0.04 - i * 0.03);
+      });
+      // ручка соскользнула после недописанной цифры
+      const ly = y0 + (C.temps.length - 0.2) * rh;
+      penLine(ctx, [[x0 + 222 * k, ly - 12 * k], [x0 + 240 * k, ly + 30 * k], [x0 + 246 * k, ly + 90 * k]], RED, 2.2, 73);
+    }
     // 15: лист прошит красной ниткой крест-накрест
     if (C.sew) {
       const { x, y, s } = C.sew, cx = x * W, cy = y * H, d = s * k;
