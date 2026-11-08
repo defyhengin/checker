@@ -358,15 +358,24 @@ function overview(){
   for(const r of DATA){h+='<tr class="'+(r.forged?'f':'')+'" data-id="'+r.id+'"><td class="n">'+r.no+'</td><td>'+esc(r.title)+'</td><td>'+esc(r.ep)+'</td><td>'+r.rec+'</td><td>'+esc(r.pen)+'</td><td>'+esc(r.morse)+'</td></tr>';}
   h+='</table></div>';
   h+='<div class="field"><div class="label">Кто пишет журнал</div><div class="val">Машинопись - старый нежный справочник самого наблюдателя. Его голос потом украл Подражатель: это и есть голос рассказчика.\nРучка - поздние пометки наблюдателя. У каждой страницы свой приём: сначала спокойные правки учёного, потом записки, подсчёты, оборванные фразы, к концу паника и следы болота.\n01-09 - настоящие пометки (снимки с разных ночей, все до 03:11), к концу всё тревожнее.\n10-12 - после 03:12 пишет уже не он: почерк слишком ровный, зачёркнуто страшное и вписано милое, пометки зазывают, Морзе со сбоями.\nКанал ведёт «рассказчик»: он выкладывает страницы как милый бестиарий, а пометки ручкой проскакивают мимо него.</div></div>';
-  h+='<div class="field"><div class="label">Порядок постов</div><div class="val">№ 03 уже вышла. Дальше по номерам: 01, 02, 04 … 13, 15 - так подписчики увидят, как пометки становятся всё тревожнее. Новая карточка - через день после выхода серии или когда в канале тихо.</div></div>';
+  h+='<div class="field"><div class="label">Порядок постов</div><div class="val">№ 03 уже вышла. Дальше по номерам: 01, 02, 04 … 13, 15, 16 - так подписчики увидят, как пометки становятся всё тревожнее. Новая карточка - через день после выхода серии или когда в канале тихо.</div></div>';
   view.innerHTML=h;
   view.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>show(tr.dataset.id));
 }
 function card(r){
   view.innerHTML='';
   const hd=document.createElement('div');hd.className='h';hd.textContent='№ '+r.no+' - '+r.title+(r.forged?' · подделка':'');view.appendChild(hd);
-  const n=document.createElement('div');n.className='note';n.textContent='Серия '+r.ep+' · REC '+r.rec+' · Морзе '+r.morse+'. Картинку сохрани долгим нажатием.';view.appendChild(n);
+  const n=document.createElement('div');n.className='note';n.textContent='Серия '+r.ep+' · REC '+r.rec+' · Морзе '+r.morse+'. Сохранить картинку - кнопкой под ней.';view.appendChild(n);
   const im=document.createElement('img');im.className='card';im.src=r.img;im.alt=r.title;view.appendChild(im);
+  // сохранить как настоящий .jpg: «Поделиться» (в галерею или сразу в Telegram) и запасная кнопка «Скачать»
+  const fname=r.img.split('/').pop();
+  const getFile=async()=>{const res=await fetch(r.img);const blob=new Blob([await res.arrayBuffer()],{type:'image/jpeg'});return new File([blob],fname,{type:'image/jpeg'});};
+  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;margin:4px 0 12px';
+  const sh=document.createElement('button');sh.className='copy';sh.textContent='Поделиться / сохранить';
+  sh.onclick=async()=>{try{const f=await getFile();if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});}else{dl.onclick();}}catch(e){if(e&&e.name!=='AbortError')dl.onclick();}};
+  const dl=document.createElement('button');dl.className='copy';dl.textContent='Скачать .jpg';
+  dl.onclick=async()=>{try{const f=await getFile();const u=URL.createObjectURL(f);const a=document.createElement('a');a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}catch(e){dl.textContent='Не вышло - долгое нажатие на картинку';}};
+  bar.appendChild(sh);bar.appendChild(dl);view.appendChild(bar);
   view.appendChild(field('Подпись к посту ('+r.caption.length+' зн.)',r.caption));
   const t=document.createElement('div');t.className='field';
   t.innerHTML='<div class="label">Текст на карточке</div><div class="val">'+esc(r.sub)+'</div><ul>'+r.facts.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul><div class="note">Ручкой: '+esc(r.pen)+'</div>';
