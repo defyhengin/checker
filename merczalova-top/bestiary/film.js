@@ -320,6 +320,23 @@
       tape(ctx, tx, ty, -0.35, 120);
       if (C.tooth.label) hand(ctx, C.tooth.label, tx - 150 * k, ty + 82 * k, 30 * k, PENCIL, -0.05);
     }
+    // 17: опись пропаж ручкой - всё отмечено галочкой, кроме последней строки
+    if (C.inv) {
+      const x0 = o.px + o.pw - 330 * k, y0 = o.py + o.ph - 250 * k, rh = 44 * k;
+      ctx.save(); ctx.fillStyle = 'rgba(242,238,227,0.92)';
+      ctx.translate(x0, y0); ctx.rotate(0.03);
+      ctx.fillRect(-24 * k, -54 * k, 330 * k, 60 * k + rh * C.inv.length);
+      ctx.restore();
+      hand(ctx, 'пропало:', x0, y0 - 14 * k, 32 * k, PEN, 0.02);
+      penLine(ctx, [[x0 - 4 * k, y0 - 4 * k], [x0 + 140 * k, y0 - 1 * k]], PEN, 2.2, 81);
+      C.inv.forEach(([text, done], i) => {
+        const yy = y0 + (i + 0.85) * rh, last = i === C.inv.length - 1, col = last ? RED : PEN;
+        const bx = x0 + 4 * k, by = yy - 24 * k, bs = 22 * k;
+        penLine(ctx, [[bx, by], [bx + bs, by + 1 * k], [bx + bs - 1 * k, by + bs], [bx + 1 * k, by + bs - 1 * k], [bx, by]], col, 2.2, 90 + i);
+        if (done) penLine(ctx, [[bx + 3 * k, by + 11 * k], [bx + 10 * k, by + 19 * k], [bx + 28 * k, by - 6 * k]], PEN, 3, 100 + i);
+        hand(ctx, text, bx + 40 * k, yy, last ? 40 * k : 32 * k, col, 0.02 - i * 0.01);
+      });
+    }
     // 16: столбик температур ручкой - куртка теплеет, «я» остывает, последняя цифра не дописана
     if (C.temps) {
       const x0 = o.px + o.pw - 300 * k, y0 = o.py + o.ph - 210 * k, rh = 44 * k;
