@@ -56,7 +56,7 @@
   const WX = 106, WY = 46, WW = 64, WH = 58;          // окно
   const MX = 10, MY = 108, MW = 136, MH = 84;         // монитор (внешний край рамки)
   const SX = MX + 3, SY = MY + 3, SW = MW - 6, SH = MH - 6;   // экран
-  const VX = SX + 2, VY = SY + 2, VW = SW - 4, VH = 40;      // окошко видео
+  const VX = SX + 2, VY = SY + 2, VW = SW - 4, VH = 36;      // окошко видео
   const DESK = 194;
 
   // ---------- статичный фон ----------
@@ -141,7 +141,7 @@
     }
     // субтитры серии
     let sub = null; for (const s of S.msubs) if (t >= s.t && t < s.end) sub = s;
-    if (sub) { ptext(sub.l[0], SX + SW / 2, VY + VH + 1, '#FFFFFF', 7, 'center'); ptext(sub.l[1], SX + SW / 2, VY + VH + 9, '#FFFFFF', 7, 'center'); }
+    if (sub) { ptext(sub.l[0], SX + SW / 2, VY + VH, '#FFFFFF', 9, 'center'); ptext(sub.l[1], SX + SW / 2, VY + VH + 10, '#FFFFFF', 9, 'center'); }
     // таймлайн монтажки
     const ty = SY + SH - 15;
     px(SX, ty - 1, SW, 1, P.uiL);
@@ -149,21 +149,24 @@
     let x = SX + 2;
     while (x < SX + SW - 4) { const w = 8 + Math.floor(R() * 16); px(x, ty + 1, w - 1, 5, R() > 0.5 ? '#3E6E8A' : '#4C5E9A'); x += w; }
     for (let i = 0; i < SW - 4; i += 2) { const h = 1 + Math.floor(U.hash(i, 5) * 4 * (0.4 + 0.6 * Math.abs(Math.sin(i * 0.11)))); px(SX + 2 + i, ty + 10 - Math.floor(h / 2), 1, h, '#5AC88A'); }
-    const ph = SX + 2 + (SW - 6) * (0.06 + 0.86 * r01(t, ev.play, ev.exp0));
+    const phAt = (tt) => SX + 2 + (SW - 6) * (0.06 + 0.86 * r01(tt, ev.play, ev.exp0));
+    // каждая вспышка лампы ложится на дорожку видео меткой - он вшивает сигнал в серию
+    for (const [a, b] of S.FLASH) if (t >= a) { const x0 = Math.round(phAt(a)), x1 = Math.max(x0 + 1, Math.round(phAt(Math.min(t, b)))); px(x0, ty + 1, x1 - x0, 5, P.warm); }
+    const ph = phAt(t);
     px(ph, ty - 2, 1, 15, P.rec); px(ph - 1, ty - 3, 3, 1, P.rec);
     // экспорт
     if (t >= ev.exp0) {
-      const bx = SX + 14, by = SY + 14, bw = SW - 28, bh = 44;
-      px(bx + 2, by + 2, bw, bh, '#05070C'); px(bx, by, bw, bh, '#242C40'); px(bx, by, bw, 9, '#3A4666');
-      ptext('ЭКСПОРТ', bx + 4, by + 1, '#FFFFFF', 7);
-      px(bx + 4, by + 13, bw - 8, 10, '#0E121C');
+      const bx = SX + 12, by = SY + 10, bw = SW - 24, bh = 52;
+      px(bx + 2, by + 2, bw, bh, '#05070C'); px(bx, by, bw, bh, '#242C40'); px(bx, by, bw, 12, '#3A4666');
+      ptext('ЭКСПОРТ', bx + 4, by + 1, '#FFFFFF', 9);
+      px(bx + 4, by + 16, bw - 8, 13, '#0E121C');
       let s = ''; for (const L of S.TYPE) if (t >= L.t) s += L.ch;
-      const w = ptext(s, bx + 6, by + 14, '#DCE6F5', 7);
-      if (t < ev.bar0 && Math.floor(t * 3) % 2 === 0) px(bx + 6 + w, by + 15, 1, 7, '#DCE6F5');
-      px(bx + 4, by + 28, bw - 8, 6, '#0E121C');
+      const w = ptext(s, bx + 6, by + 17, '#DCE6F5', 9);
+      if (t < ev.bar0 && Math.floor(t * 3) % 2 === 0) px(bx + 6 + w, by + 18, 1, 9, '#DCE6F5');
+      px(bx + 4, by + 33, bw - 8, 6, '#0E121C');
       const p = r01(t, ev.bar0, ev.bar1);
-      if (p > 0) px(bx + 5, by + 29, Math.round((bw - 10) * p), 4, '#5AC8D2');
-      if (t >= ev.done) ptext('ГОТОВО', bx + bw / 2, by + 35, '#5AC88A', 7, 'center');
+      if (p > 0) px(bx + 5, by + 34, Math.round((bw - 10) * p), 4, '#5AC8D2');
+      if (t >= ev.done) ptext('ГОТОВО', bx + bw / 2, by + 40, '#5AC88A', 9, 'center');
     }
   }
   // отражение в тёмном экране: тот, кто стоит за камерой
