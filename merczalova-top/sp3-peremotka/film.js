@@ -104,30 +104,50 @@
   }
 
   function silhouette(t) {
-    // маленький, с ушками, у самого стекла. Губы шевелятся на полслова раньше наблюдателя.
-    const x = SX, y = SY;
-    ellipse(x, y + 18, 13, 10, P.ink);
-    ellipse(x, y, 9, 10, P.ink);
-    for (const s of [-1, 1]) for (let i = 0; i < 13; i++) px(x + s * (5 + Math.floor(i / 3)) - (s < 0 ? 2 : 0), y - 8 - i, 3, 1, P.ink);
-    const blink = U.hash(Math.floor(t * 0.7), 5) > 0.85 && (t * 0.7) % 1 < 0.1;
-    if (!blink) { px(x - 5, y - 3, 3, 2, P.eye); px(x + 3, y - 3, 3, 2, P.eye); }
-    const o = S.mouthAt(t), h = Math.round(o * 4.4);
-    if (h > 0) {
-      px(x - 3, y + 3, 7, h, '#5A1620');
-      if (h >= 2) px(x - 3, y + 3, 7, 1, '#D8D0C0');
-    } else px(x - 2, y + 4, 5, 1, '#1A0C10');
+    // Подражатель далеко, в камышах у кувшинки, почти сливается с темнотой. Его замечают со второго просмотра:
+    // губы шевелятся чуть заметно (тёмная щель, без света), глаза ловят свет лампы только на миг.
+    // Лишь на «это уже не я» (когда отражение поворачивается к нему) глаза открываются и остаются.
+    const x = WX + 80, y = WY + 93;
+    const body = '#0B0D1C';
+    ellipse(x, y + 7, 5, 4, body);
+    ellipse(x, y, 4, 4, body);
+    for (const s of [-1, 1]) for (let i = 0; i < 6; i++) px(x + s * (2 + Math.floor(i / 3)) - (s < 0 ? 1 : 0), y - 3 - i, 2, 1, body);
+    // камыши спереди частично закрывают
+    for (const [cx, h] of [[x - 6, 14], [x - 3, 11], [x + 4, 13], [x + 7, 9]]) px(cx, y + 11 - h, 1, h, P.ink);
+    const glint = (Math.floor(t * 1.0) % 7 === 3 && (t % 1) < 0.18) || t >= ev.turn + 0.35;
+    if (glint) { const w = t >= ev.turn + 0.35 ? 2 : 1; px(x - 1 - w, y - 1, w, 1, P.eye); px(x + 2, y - 1, w, 1, P.eye); }
+    const o = S.mouthAt(t);
+    if (o > 0.35) px(x - 1, y + 2, 3, 1, '#020206');
   }
 
-  function firefly(t) {
-    if (t < S.FLY0) return;
-    // на самой линзе: большое размытое пятно холодного света
-    const a = r01(t, S.FLY0, S.FLY0 + 0.8) * (1 - r01(t, S.FLY1 + 0.3, S.FLY1 + 1.2) * 0.75);
+  function reflection(t) {
+    // наблюдателя видно только отражением в стекле (как в «Наблюдении №4»): лампа горит - отражение заметно
+    const turn = ease(r01(t, ev.turn, ev.turn + 0.5));        // «это уже не я» - поворачивает голову к силуэту
+    const lean = ease(r01(t, ev.reach, ev.reach + 1.0));      // тянется к камере - отражение растёт
+    const bob = Math.round(S.envAt(t) * 1.0);
+    g.save(); g.globalAlpha = 0.2 + 0.08 * lean;
+    const k = 1 + 0.35 * lean;
+    const hx = WX + 36 + Math.round(4 * turn + 6 * lean), hy = WY + 74 - bob + Math.round(4 * lean);
+    const col = '#C8CCD8';
+    ellipse(hx, hy, Math.round(8 * k), Math.round(10 * k), col);
+    px(hx - 3, hy + Math.round(9 * k), 7, 5, col);
+    ellipse(hx, hy + Math.round(24 * k), Math.round(20 * k), Math.round(8 * k), col);
+    if (turn > 0.5) px(hx + Math.round(8 * k), hy + 1, 2, 2, col);           // нос в профиль - к окну справа
+    g.restore();
+  }
+
+  function lensFly(ctx, t) {
+    // светлячок сидит на линзе камеры, которая СЕЙЧАС проигрывает кассету (упавшая камера из 19-й):
+    // рисуется поверх записи, без развёртки и зерна. Появляется в конце перемотки, мигает ВЫКЛЮЧИ, гаснет со стоп-кадром.
+    const t0 = ev.rew1 - 1.2;
+    if (t < t0 || t >= ev.black) return;
+    const a = r01(t, t0, t0 + 0.8) * (1 - r01(t, ev.chew, ev.black));
     const on = S.flyOn(t);
-    const x = 150, y = 70;
-    const R0 = on ? 17 : 6, k = on ? 0.85 : 0.35;
-    const gr = g.createRadialGradient(x, y, 1, x, y, R0);
-    gr.addColorStop(0, `rgba(210,250,255,${k * a})`); gr.addColorStop(0.35, `rgba(90,200,210,${0.7 * k * a})`); gr.addColorStop(1, 'rgba(90,200,210,0)');
-    g.fillStyle = gr; g.fillRect(x - R0, y - R0, R0 * 2, R0 * 2);
+    const x = 900, y = 430;
+    const R0 = on ? 110 : 34, k = on ? 0.9 : 0.4;
+    const gr = ctx.createRadialGradient(x, y, 2, x, y, R0);
+    gr.addColorStop(0, `rgba(215,250,255,${k * a})`); gr.addColorStop(0.3, `rgba(90,200,210,${0.65 * k * a})`); gr.addColorStop(1, 'rgba(90,200,210,0)');
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = gr; ctx.fillRect(x - R0, y - R0, R0 * 2, R0 * 2); ctx.restore();
   }
 
   function observer(t) {
@@ -169,7 +189,15 @@
     g.drawImage(wall, 0, 0);
     g.save(); g.beginPath(); g.rect(WX, WY, WW, WH); g.clip();
     g.drawImage(outside, 0, 0);
+    {
+      const up = r01(t, S.CC[2].t, S.CC[2].t + 0.6), down = r01(t, S.CC[3].t, S.CC[3].end + 0.6);
+      const k = Math.max(0, 0.18 + 0.4 * up - 0.5 * down);
+      const fx = WX + 26, fy = WY + 101, gr = g.createRadialGradient(fx, fy, 0.5, fx, fy, 12);
+      gr.addColorStop(0, `rgba(170,240,245,${k})`); gr.addColorStop(1, 'rgba(90,200,210,0)');
+      g.fillStyle = gr; g.fillRect(fx - 12, fy - 12, 24, 24);
+    }
     silhouette(t);
+    reflection(t);
     g.restore();
     px(WX - 4, WY - 4, WW + 8, 4, P.frame); px(WX - 4, WY + WH, WW + 8, 5, P.frame);
     px(WX - 4, WY, 4, WH, P.frame); px(WX + WW, WY, 4, WH, P.frame);
@@ -177,11 +205,22 @@
     px(WX - 4, WY + WH + 5, WW + 8, 1, P.frameD);
     dither(0, 186, LW, LH - 186, [P.desk, P.deskD], (x, y) => 0.8 + y / 60 + 0.3 * Math.sin(x * 0.2 + y * 0.05));
     px(0, 186, LW, 2, '#4A372A');
-    // блокнот справа: «кувшинка» и подчёркнуто
-    px(104, 196, 62, 40, P.paperD); px(103, 195, 62, 40, P.paper);
-    for (let y = 203; y < 233; y += 8) px(105, y + 6, 58, 1, P.line);
-    ptext('кувшинка', 107, 199, P.pen, 9); px(107, 210, 44, 1, P.pen);
-    ptext('не', 107, 215, P.pen, 9);
+    // блокнот: «кувшинка» пишется по букве, пока он говорит, потом «не»
+    px(36, 196, 98, 48, P.paperD); px(35, 195, 98, 48, P.paper);
+    for (let y = 203; y < 241; y += 9) px(37, y + 7, 94, 1, P.line);
+    const w1 = 'кувшинка', w2 = 'не';
+    const n1 = Math.max(0, Math.min(w1.length, Math.floor((t - (S.CC[1].t + 0.2)) / 0.16)));
+    const n2 = Math.max(0, Math.min(w2.length, Math.floor((t - (S.CC[3].t + 0.1)) / 0.2)));
+    let ex = 40, ey = 200;
+    if (n1) { ex = 40 + ptext(w1.slice(0, n1), 40, 199, P.pen, 10); }
+    if (n1 === w1.length && t > S.CC[1].t + 1.6) px(40, 211, 50, 1, P.pen);
+    if (n2) { ex = 40 + ptext(w2.slice(0, n2), 40, 217, P.pen, 10); ey = 218; }
+    // ручка без руки - только кончик у последней буквы, пока пишется
+    if ((n1 > 0 && n1 < w1.length) || (n2 > 0 && n2 < w2.length)) for (let i = 0; i < 12; i++) px(ex + 1 + i, ey + 9 + Math.floor(i * 0.9), 2, 1, i < 2 ? '#C9C2AE' : '#30303A');
+    // диктофон на столе, пишет
+    px(146, 214, 14, 24, '#1E2226'); px(148, 217, 10, 7, '#3A4048');
+    for (let i = 0; i < 4; i++) px(149, 228 + i * 2, 8, 1, '#2A2E34');
+    if (Math.floor(t * 2) % 2 === 0 && t < ev.chew) px(156, 215, 2, 2, P.rec);
     // лампа слева (горит ровно - вечер)
     px(4, 196, 22, 4, P.deskD);
     for (let i = 0; i < 26; i++) px(13 + Math.floor(i * 0.2), 170 + i, 2, 1, '#202020');
@@ -190,8 +229,6 @@
     const gr = g.createRadialGradient(14, 176, 2, 14, 176, 120);
     gr.addColorStop(0, 'rgba(255,200,120,0.42)'); gr.addColorStop(1, 'rgba(255,200,120,0)');
     g.fillStyle = gr; g.fillRect(0, 0, LW, LH);
-    observer(t);
-    firefly(t);
     cc(t);
     // HUD
     if (Math.floor(t * 2) % 2 === 0) px(8, 37, 5, 5, P.rec);
@@ -317,8 +354,8 @@
     if (t < ev.hit) {
       // чёрный экран. Еле слышно - и еле видно.
       if (t >= ev.wh1 && t < ev.wh2 + 1.3) {
-        const w1 = ptext('это я.', LW / 2 - 22, 156, '#3C404A', 9, 'center');
-        if (t >= ev.wh2) ptext('открой.', LW / 2 + 22, 156, '#3C404A', 9, 'center');
+        ptext('это я.', LW / 2 - 22, 96, '#1E2026', 9, 'center');
+        if (t >= ev.wh2) ptext('открой.', LW / 2 + 22, 96, '#1E2026', 9, 'center');
       }
       return;
     }
@@ -350,10 +387,11 @@
       await Promise.all(jobs);
     },
     draw(ctx, t) {
-      if (isPaper(t)) { paper(ctx, t); return; }
+      if (isPaper(t)) { paper(ctx, t); lensFly(ctx, t); return; }
       g = gReal;
       pixel(t);
       ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(lc, 0, 0, LW, LH, 0, 0, W, H); ctx.restore();
+      lensFly(ctx, t);
     },
     post: { paper: 0, vignette: 0.22, grain: 0 },
   });
