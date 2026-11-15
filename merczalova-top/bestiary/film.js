@@ -357,6 +357,24 @@
       const ly = y0 + (C.temps.length - 0.2) * rh;
       penLine(ctx, [[x0 + 222 * k, ly - 12 * k], [x0 + 240 * k, ly + 30 * k], [x0 + 246 * k, ly + 90 * k]], RED, 2.2, 73);
     }
+    // 19: наблюдатель засыпает над страницей - «не спать» съезжает вниз, ручка уходит чертой до края; круг от кружки
+    if (C.ring) {
+      const rx = C.ring.x * W, ry = C.ring.y * H, rr = C.ring.r * k;
+      ctx.save(); ctx.strokeStyle = 'rgba(120,80,40,0.28)'; ctx.lineWidth = 9 * k; ctx.beginPath(); ctx.arc(rx, ry, rr, 0.5, 6.0); ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,80,40,0.16)'; ctx.lineWidth = 3 * k; ctx.beginPath(); ctx.arc(rx + 3 * k, ry + 2 * k, rr - 9 * k, 0, 7); ctx.stroke();
+      for (let i = 0; i < 4; i++) dot(ctx, rx + (U.hash(i, 941) - 0.5) * rr * 3, ry + (U.hash(i, 942) - 0.2) * rr * 1.4, (3 + 5 * U.hash(i, 943)) * k, 'rgba(120,80,40,0.2)');
+      ctx.restore();
+    }
+    if (C.doze) {
+      let x = o.L + 10 * k, y = H - 138 * k;
+      C.doze.forEach((w, i) => {
+        const rot = 0.02 + i * 0.09, sz = (44 - i * 3) * k;
+        const ww = hand(ctx, w, x, y, sz, PEN, rot);
+        x += ww * Math.cos(rot) + 22 * k; y += ww * Math.sin(rot) + i * 14 * k;
+      });
+      // ручка сползла по листу, когда он уснул
+      penLine(ctx, [[x - 22 * k, y - 4 * k], [x + 6 * k, y + 14 * k], [x + 26 * k, y + 44 * k], [x + 38 * k, H + 12 * k]], PEN, 2.6, 951);
+    }
     // 15: лист прошит красной ниткой крест-накрест
     if (C.sew) {
       const { x, y, s } = C.sew, cx = x * W, cy = y * H, d = s * k;
