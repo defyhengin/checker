@@ -4,7 +4,7 @@
   const U = globalThis.U, G = globalThis.G, Studio = globalThis.Studio;
   const W = G.W, H = G.H, k = W / 1080;
   const id = (new URLSearchParams(location.search)).get('card') || globalThis.CARD_ID;
-  const C = globalThis.CARDS[id];
+  const C = id === 'page14' ? globalThis.PAGE14 : globalThis.CARDS[id];
   const TYPE = '#23252B', PEN = '#1D3A8F', RED = '#B3261E';
   const TW = '"Courier 10 Pitch", "Courier", monospace';
   let IMG = null;
@@ -372,9 +372,89 @@
     }
   }
 
+  // 18: строка ручкой сходит на шёпот - буквы всё мельче и бледнее, в конце только точки
+  function fadeLine(ctx, o) {
+    if (!C.fade) return;
+    let x = o.L, y = Math.min(o.bottom - 10 * k, H - 70 * k), size = 40;
+    const words = C.fade.split(' ');
+    ctx.save();
+    for (let w = 0; w < words.length; w++) {
+      const p = w / words.length;
+      const sz = lerpN(40, 11, p), a = lerpN(0.95, 0.25, Math.pow(p, 1.3));
+      ctx.font = `italic 500 ${Math.round(sz * k)}px "Lora"`;
+      const ww = ctx.measureText(words[w] + ' ').width;
+      if (x + ww > o.R) { x = o.L + 30 * k; y += 46 * k; }
+      hand(ctx, words[w], x, y + (U.hash(w, 77) - 0.5) * 4 * k, sz * k, `rgba(29,58,143,${a})`, -0.01 - p * 0.03);
+      x += ww;
+    }
+    for (let i = 0; i < 5; i++) dot(ctx, x + i * 9 * k, y - 2 * k, 1.4 * k, `rgba(29,58,143,${0.25 - i * 0.04})`);
+    ctx.restore();
+  }
+  const lerpN = (a, b, t) => a + (b - a) * t;
+
+  // Вырванная страница № 14: последняя запись наблюдателя о себе. Только ручка, мокрая, оборвана снизу.
+  function page14(ctx) {
+    ctx.save();
+    // лист чуть повёрнут на тёмном мху
+    ctx.fillStyle = '#0E1A1C'; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 400; i++) dot(ctx, U.hash(i, 901) * W, U.hash(i, 902) * H, (1 + 3 * U.hash(i, 903)) * k, U.hash(i, 904) < 0.5 ? 'rgba(40,80,70,0.5)' : 'rgba(5,12,12,0.6)');
+    ctx.translate(W / 2, H / 2); ctx.rotate(-0.035); ctx.translate(-W / 2, -H / 2);
+    const top = 40 * k, left = 70 * k, right = W - 50 * k;
+    const tear = []; for (let i = 0; i <= 28; i++) { const x = right - (i / 28) * (right - left); tear.push([x, H * 0.80 + (U.hash(i, 911) - 0.5) * 60 * k + Math.sin(i * 0.7) * 24 * k]); }
+    // вырван из колец: слева рваные полукруги
+    const edge = []; for (let i = 0; i <= 24; i++) { const y = top + (i / 24) * (H * 0.80 - top); edge.push([left + (U.hash(i, 912) * 10 + (i % 5 === 2 ? 22 : 0)) * k, y]); }
+    ctx.save(); ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(right, top + 6 * k); ctx.lineTo(right, tear[0][1]);
+    for (const [x, y] of tear) ctx.lineTo(x, y); for (const [x, y] of edge.slice().reverse()) ctx.lineTo(x, y); ctx.closePath();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 30 * k; ctx.fillStyle = '#E4DFCF'; ctx.fill(); ctx.shadowBlur = 0; ctx.clip();
+    // клетка, поля
+    ctx.strokeStyle = 'rgba(70,110,170,0.14)'; ctx.lineWidth = 1.4 * k; const g = 38 * k;
+    for (let x = 0; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(200,60,60,0.4)'; ctx.lineWidth = 2.5 * k; ctx.beginPath(); ctx.moveTo(170 * k, 0); ctx.lineTo(170 * k, H); ctx.stroke();
+    // вода: жёлто-бурые разводы и потёки
+    for (let i = 0; i < 9; i++) {
+      const x = U.hash(i, 921) * W, y = U.hash(i, 922) * H * 0.8, r = (90 + 220 * U.hash(i, 923)) * k;
+      const gr = ctx.createRadialGradient(x, y, r * 0.6, x, y, r);
+      gr.addColorStop(0, 'rgba(150,120,70,0.06)'); gr.addColorStop(0.92, 'rgba(120,90,50,0.18)'); gr.addColorStop(1, 'rgba(120,90,50,0)');
+      ctx.fillStyle = gr; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    // текст: почерк сбивается
+    const L = 200 * k;
+    hand(ctx, 'Запись № 14', L, 130 * k, 54 * k, PEN, -0.02);
+    penLine(ctx, [[L, 146 * k], [L + 280 * k, 142 * k]], PEN, 2.4, 931);
+    const lines = [
+      ['Третью ночь не сплю.', 46, 0.01, 0],
+      ['Из камышей смотрят.', 46, -0.01, 0.1],
+      ['Считаю глаза: 12… 17… 24', 46, 0.02, 0.25],
+      ['Мой голос слышно снаружи.', 44, -0.03, 0.4],
+      ['Я молчу.', 44, 0.04, 0.5],
+      ['Стучат.', 58, -0.06, 0.75],
+    ];
+    let y = 260 * k;
+    lines.forEach(([t, sz, rot, smear], i) => {
+      const x = L + (U.hash(i, 941) - 0.5) * 20 * k + i * 6 * k;
+      if (smear > 0) { ctx.save(); ctx.filter = `blur(${Math.round((2 + 7 * smear) * k)}px)`; ctx.globalAlpha = 0.55; hand(ctx, t, x + 4 * k, y + 10 * smear * k, sz * k, PEN, rot); ctx.restore(); }
+      ctx.save(); ctx.globalAlpha = 1 - 0.45 * smear; hand(ctx, t, x, y, sz * k, PEN, rot); ctx.restore();
+      y += (82 + i * 8) * k;
+    });
+    // 03:12 - крупно, красным, обведено несколько раз
+    const ty = y + 40 * k;
+    hand(ctx, '03:12', L + 60 * k, ty, 96 * k, RED, -0.08);
+    for (let r = 0; r < 3; r++) { const pts = []; for (let i = 0; i <= 26; i++) { const a = -0.3 + (i / 24) * Math.PI * 2; pts.push([L + 175 * k + Math.cos(a) * (150 + r * 8) * k, ty - 34 * k + Math.sin(a) * (62 + r * 5) * k]); } penLine(ctx, pts, RED, 2.6, 951 + r); }
+    // ручка сорвалась вниз к краю - туда, где лист оборван
+    penLine(ctx, [[L + 340 * k, ty - 10 * k], [L + 420 * k, ty + 60 * k], [L + 470 * k, ty + 160 * k], [L + 480 * k, H]], PEN, 3, 961);
+    // мокрая полоса поперёк - строки поплыли
+    ctx.fillStyle = 'rgba(80,110,140,0.10)'; ctx.fillRect(0, 470 * k, W, 120 * k);
+    ctx.restore();
+    // рваный край - светлые волокна
+    ctx.strokeStyle = 'rgba(240,235,220,0.9)'; ctx.lineWidth = 2 * k; ctx.beginPath(); tear.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+    ctx.restore();
+  }
+
   Studio.film({
-    async init() { IMG = await Studio.loadImage(C.img); await document.fonts.load('italic 500 40px "Lora"'); await document.fonts.load(`32px ${TW}`); },
+    async init() { if (C.img) IMG = await Studio.loadImage(C.img); await document.fonts.load('italic 500 40px "Lora"'); await document.fonts.load(`32px ${TW}`); },
     draw(ctx) {
+      if (C.page14) { page14(ctx); return; }
       paper(ctx);
       const L = 170 * k, R = W - 70 * k;
       ctx.textBaseline = 'alphabetic';
@@ -435,6 +515,7 @@
 
       const bottom = Math.max(y + 34 * k, H - 92 * k);
       devices(ctx, { L, R, y, bottom, py, ph, px, pw, circ });
+      fadeLine(ctx, { L, R, y, bottom });
 
       // Морзе на полях карандашом
       const mEnd = morseMargin(ctx, C.morse, 100 * k, py + ph + 40 * k, C.morseCode);
