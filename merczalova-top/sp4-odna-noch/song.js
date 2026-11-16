@@ -14,6 +14,19 @@ const bus = () => new Bus(N);
 const keys = bus(), pad = bus(), low = bus(), fx = bus(), amb = bus(), verb = bus(), frogs = bus(), humB = bus();
 const soft = (len, f0, f1, q = 0.8, seed = 20) => I.noiseSweep(len, f0, f1, { q, pink: true, seed, shape: (x) => Math.sin(Math.PI * x) });
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+// мягкая шкатулка: на октаву ниже, мягкая атака, почти без звенящих обертонов
+function softBox(midi) {
+  const f = hz(midi), n = Math.round(2.6 * SR), b = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR, env = Math.min(1, t / 0.014) * Math.exp(-t / 0.75);
+    b[i] = env * (Math.sin(2 * Math.PI * f * t) + 0.22 * Math.sin(2 * Math.PI * 2 * f * t) * Math.exp(-t / 0.25) + 0.05 * Math.sin(2 * Math.PI * 3.01 * f * t) * Math.exp(-t / 0.12));
+  }
+  return b;
+}
+function lowpassBus(bus, fc) {
+  const a = 1 - Math.exp(-2 * Math.PI * fc / SR);
+  for (const ch of [bus.L, bus.R]) { let y = 0; for (let i = 0; i < ch.length; i++) { y += a * (ch[i] - y); ch[i] = y; } }
+}
 function U01(i) { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); }
 function croak(pitch = 1) {
   const n = Math.round(0.42 * SR), b = new Float32Array(n); let ph = 0;
@@ -58,9 +71,9 @@ for (const c of sc.croaks) frogs.addMono(croak(c.pitch), c.t, 0.18, c.pan);
 // ---------- музыка ----------
 for (const n of sc.box) {
   if (sc.quiet(n.t) || sc.quiet(n.t + 0.3)) continue;
-  const g = 0.11 * (n.t < ev.c5 ? 1 : 0.7);
+  const g = 0.075 * (n.t < ev.c5 ? 1 : 0.7);
   if (n.t > ev.c5 && n.t % (4 * sc.BEAT) > 2 * sc.BEAT) continue; // к рассвету шкатулка реже
-  const mb = I.musicBox(n.midi); keys.addMono(mb, n.t, g, 0); verb.addMono(mb, n.t, 0.4);
+  const mb = softBox(n.midi - 12); keys.addMono(mb, n.t, g, 0); verb.addMono(mb, n.t, 0.3);
 }
 for (const c of sc.chords) {
   if (c.t0 >= DURATION - 1) continue;
@@ -72,7 +85,7 @@ for (const c of sc.chords) {
 
 // ---------- глава 1 ----------
 sc.caps.forEach((t, i) => fx.addMono(I.pop(1600 + i * 120, 40 + i), t, 0.07, (i - 3) * 0.15));        // шляпки
-sc.lightsOn.forEach((t, i) => { const b = I.bell(hz(m(['A6', 'C7', 'E7', 'A6', 'E7', 'C7', 'B6', 'A6', 'E7'][i])), 0.5); fx.addMono(b, t, 0.035, (i - 4) * 0.18); verb.addMono(b, t, 0.08); });
+sc.lightsOn.forEach((t, i) => { const b = softBox(m(['A5', 'C6', 'E6', 'A5', 'E6', 'C6', 'B5', 'A5', 'E6'][i])); fx.addMono(b, t, 0.03, (i - 4) * 0.18); verb.addMono(b, t, 0.06); });
 fx.addMono(crunch(1, 1), ev.bite1, 0.5, 0.4);
 for (let i = 0; i < 3; i++) fx.addMono(crunch(20 + i, 0.25), ev.bite1 + 0.3 + i * 0.22, 0.08, 0.4);
 // остальные укусы луны (в переходах) - тихо, издалека
@@ -111,7 +124,7 @@ for (const c of sc.chords) {
   humB.addMono(humNote(n, (c.t1 - c.t0) * 0.9), c.t0, 0.1, 0.5);
 }
 for (let i = 0; i < 4; i++) fx.addMono(I.woodTick(0.6 + i * 0.07), ev.twitch + i * 0.05, 0.12, 0);     // пальцы-свечи щёлкнули
-{ const b = I.bell(hz(m('E7')), 0.9); fx.addMono(b, ev.land, 0.05, 0.3); verb.addMono(b, ev.land, 0.2); } // огонёк сел
+{ const b = softBox(m('E6')); fx.addMono(b, ev.land, 0.05, 0.3); verb.addMono(b, ev.land, 0.2); } // огонёк сел
 
 // ---------- глава 4 ----------
 ev.quilt.forEach((t, i) => fx.addMono(I.paperFwip(0.6 + i * 0.1, 50 + i), t, 0.08, (i - 1.5) * 0.3));
@@ -128,7 +141,7 @@ fx.addMono(I.thud(42, 0.2), ev.eye, 0.55, 0);
 fx.addMono(I.subBoom(2.6, 50, 22), ev.eye + 0.03, 0.5, 0);
 { for (const [n, g] of [[m('A1'), 0.32], [m('A#1'), 0.22], [m('E2'), 0.12]]) { const s = I.strings(n, ev.dark - ev.eye + 0.5, { attack: 0.03, release: 1.2, bright: 0.3, seed: n }); low.addStereo(s.L, s.R, ev.eye, g); } }
 // в темноте - три ноты шкатулки, медленно
-[['A5', 0], ['C6', 0.9], ['E6', 1.8]].forEach(([n, d]) => { const mb = I.musicBox(m(n)); keys.addMono(mb, ev.rec + 0.4 + d, 0.09, 0); verb.addMono(mb, ev.rec + 0.4 + d, 0.45); });
+[['A4', 0], ['C5', 0.9], ['E5', 1.8]].forEach(([n, d]) => { const mb = softBox(m(n)); keys.addMono(mb, ev.rec + 0.4 + d, 0.09, 0); verb.addMono(mb, ev.rec + 0.4 + d, 0.45); });
 
 // ---------- голос ----------
 const voice = bus();
@@ -138,6 +151,7 @@ for (const v of sc.vo) {
 }
 MIX.duck([keys, pad, low, amb, verb, humB, frogs], voice, { depth: 0.55, attack: 0.08, release: 0.5 });
 
+lowpassBus(keys, 2400);
 const stems = { voice, keys, pad, low, fx, amb, frogs, hum: humB, verb: reverb(verb, { room: 0.9, damp: 0.35 }) };
 // «того услышат» - всё обрывается; перед глазом подо льдом - полная тишина
 for (const name of ['keys', 'pad', 'amb', 'verb', 'low', 'hum', 'frogs']) { MIX.gate(stems[name], ev.hush, ev.e4 + 0.5); MIX.gate(stems[name], ev.eye - 2.2, ev.eye); }
