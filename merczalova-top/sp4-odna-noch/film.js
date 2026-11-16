@@ -396,16 +396,6 @@
     const glowE = t >= ev.mimicEyes ? Math.max(0.35, 1 - (t - ev.mimicEyes) * 0.5) : 0;
     CR.mimic(ctx, MIM.x, MIM.y, MIM.s, t, { look: -0.6, lookY: 0.2, half: t >= ev.mimicEyes ? 1 : 0.55, glowEyes: glowE, mouth: 0 });
     for (let j = 0; j < 9; j++) reed(ctx, MIM.x - 70 + j * 18, MIM.y + 18, 120 + 60 * U.hash(j, 701), (U.hash(j, 702) - 0.5) * 30, 600 + j, t);
-    // стрелки «кто кого ест», потом - все к Подражателю
-    const fade = 1 - sm(t, ev.e2 - 1, ev.e2 + 0.5);
-    if (t > ev.chainStart - 0.1 && fade > 0) {
-      ctx.save(); ctx.globalAlpha = fade;
-      const CH = [[[PZ.x + 20, 700], [TS.x - 20, 640], -90], [[3150, 540], [3170, 640], -20], [[3260, 650], [NEST.x - 30, 640], -70], [[MOKH.x - 40, 640], [MOKH.x + 30, 600], -60]];
-      CH.forEach(([a, b, bend], i) => arrow(ctx, a, b, r01(t, S.arrows[i], S.arrows[i] + 0.45), bend, 'rgba(232,238,255,0.75)', 900 + i * 7));
-      const FROM = [[TS.x, 640], [PZ.x, 720], [3170, 650], [NEST.x, 640], [MOKH.x, 620], [FR.x, 740]];
-      FROM.forEach((a, i) => arrow(ctx, a, [MIM.x - 30, 600], r01(t, S.arrowsToMimic[i], S.arrowsToMimic[i] + 0.35), -140 - i * 25, 'rgba(255,210,140,0.85)', 960 + i * 7));
-      ctx.restore();
-    }
   }
 
   // ---------- глава 3: Праздник ----------
@@ -660,6 +650,66 @@
     cracks(ctx, t);
   }
 
+
+  // ---------- страница журнала «кто кого ест» ----------
+  const INKC = '#24356A';
+  function pen(ctx, pts, p, seed, lw = 3) {
+    if (p <= 0) return;
+    const n = Math.max(2, Math.ceil(pts.length * p));
+    G.line(ctx, pts.slice(0, n), { color: INKC, lw, seed });
+  }
+  function penArrow(ctx, a, b, p, bend, seed) {
+    if (p <= 0) return;
+    const mx = (a[0] + b[0]) / 2 + bend[0], my = (a[1] + b[1]) / 2 + bend[1], N = 18, pts = [];
+    for (let i = 0; i <= N; i++) { const u = i / N; pts.push([(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * mx + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * my + u * u * b[1]]); }
+    pen(ctx, pts, p, seed);
+    if (p >= 0.98) { const [x2, y2] = pts[N], [x1, y1] = pts[N - 2], an = Math.atan2(y2 - y1, x2 - x1); G.line(ctx, [[x2 - Math.cos(an - 0.45) * 22, y2 - Math.sin(an - 0.45) * 22], [x2, y2], [x2 - Math.cos(an + 0.45) * 22, y2 - Math.sin(an + 0.45) * 22]], { color: INKC, lw: 3, seed: seed + 50 }); }
+  }
+  function word(ctx, text, x, y, a, size = 44, rot = 0) {
+    if (a <= 0.01) return;
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate(rot);
+    G.text(ctx, text, 0, 0, { size, fam: 'Caveat', weight: 700, color: INKC, align: 'center', boil: 0.5 });
+    ctx.restore();
+  }
+  function journalPage(ctx, t) {
+    const t0 = ev.chainStart - 0.9;
+    if (t < t0 || t >= ev.mimicEyes) return;
+    const sl = ease.outQuad(r01(t, t0, t0 + 0.7));
+    ctx.save(); ctx.fillStyle = `rgba(3,4,10,${0.45 * sl})`; ctx.fillRect(0, 0, W, H); ctx.restore();
+    const PW = 1180, PH = 720, cx = W / 2, cy = H * 0.455 + (1 - sl) * H * 0.7;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.018);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-PW / 2 + 12, -PH / 2 + 16, PW, PH);
+    ctx.fillStyle = '#E9DFC6'; ctx.fillRect(-PW / 2, -PH / 2, PW, PH);
+    ctx.strokeStyle = 'rgba(120,140,180,0.25)'; ctx.lineWidth = 1.5;
+    for (let y = -PH / 2 + 110; y < PH / 2 - 20; y += 44) { ctx.beginPath(); ctx.moveTo(-PW / 2 + 30, y); ctx.lineTo(PW / 2 - 30, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(190,80,80,0.35)'; ctx.beginPath(); ctx.moveTo(-PW / 2 + 90, -PH / 2); ctx.lineTo(-PW / 2 + 90, PH / 2); ctx.stroke();
+    for (const [x, y, r] of [[-PW / 2 + 40, -PH / 2 + 10, -0.5], [PW / 2 - 40, -PH / 2 + 10, 0.5]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.fillStyle = 'rgba(230,220,170,0.75)'; ctx.fillRect(-55, -16, 110, 32); ctx.restore(); }
+    ctx.fillStyle = '#2A2018'; ctx.font = 'bold 30px monospace'; ctx.textAlign = 'left'; ctx.fillText('Кто кого ест (ночные наблюдения)', -PW / 2 + 120, -PH / 2 + 78);
+    // кто -> кого: стрелка от того, кто ест, к тому, что он ест
+    const A_ = S.arrows, pr = (i) => r01(t, A_[i] - 0.25, A_[i] + 0.35), nm = (i) => sm(t, A_[i] - 0.5, A_[i] - 0.2);
+    const ROWS = [
+      ['Тишка', 'звук Пузырька', -170],
+      ['Улыбыши', 'пальцы Фонарницы', -60],
+      ['Зубочка', 'зубки Улыбышей', 50],
+      ['Моховички', 'Мохнач', 160],
+    ];
+    ROWS.forEach(([who, what, y], i) => {
+      word(ctx, who, -330, y + 14, nm(i), 50, -0.02);
+      penArrow(ctx, [-200, y], [40, y], pr(i), [0, -18], 1700 + i * 7);
+      word(ctx, what, 210, y + 14, sm(t, A_[i] + 0.2, A_[i] + 0.5), 44, 0.01);
+    });
+    // Подражатель - в углу, ни одна стрелка к нему не ведёт
+    const M = S.arrowsToMimic, mx = 380, my = 270;
+    word(ctx, 'Подражатель', mx, my + 12, sm(t, ev.toMimic - 0.5, ev.toMimic), 50, -0.04);
+    const loops = r01(t, M[0], M[5] + 0.3);
+    if (loops > 0) {
+      const pts = []; for (let i = 0; i <= 90; i++) { const u = i / 90, an = -2.4 + u * Math.PI * 2 * 2.6; pts.push([mx + Math.cos(an) * (150 + 10 * Math.sin(u * 13)), my + Math.sin(an) * (52 + 6 * Math.cos(u * 11))]); }
+      pen(ctx, pts, loops, 1790, 3.2);
+    }
+    word(ctx, 'а его?..', mx - 290, my + 16, sm(t, M[5] + 0.2, M[5] + 0.6), 50, -0.06);
+    ctx.restore();
+  }
+
   // ---------- титры ----------
   function cardText(ctx, t, t0, dur, small, big) {
     const a = sm(t, t0, t0 + 0.8) * (1 - sm(t, t0 + dur - 0.8, t0 + dur));
@@ -782,10 +832,10 @@
     bough(-40 + px, 30, 1, 480, 120, 1100); bough(-40 + px, -20, 1, 340, 150, 1101); bough(-20 + px, 110, 1, 260, 90, 1102);
     bough(W + 40 + px, 10, -1, 420, 140, 1200); bough(W + 30 + px, -30, -1, 300, 110, 1201);
     // трава у объектива
-    for (let i = 0; i < 26; i++) {
-      const side = i < 13 ? 0 : 1, j = i % 13, x = side ? W - j * 26 - 10 : j * 26 + 10, h = 140 + 160 * U.hash(i, 1300) * (1 - j / 16);
-      const lean = (side ? -1 : 1) * (20 + 30 * U.hash(i, 1301)) + Math.sin(t * 0.8 + i) * 6;
-      ctx.strokeStyle = '#02040A'; ctx.lineWidth = 7 + 4 * U.hash(i, 1302); ctx.lineCap = 'round';
+    for (let i = 0; i < 16; i++) {
+      const side = i < 8 ? 0 : 1, j = i % 8, x = side ? W - j * 22 - 8 : j * 22 + 8, h = 40 + 60 * U.hash(i, 1300) * (1 - j / 10);
+      const lean = (side ? -1 : 1) * (8 + 14 * U.hash(i, 1301)) + Math.sin(t * 0.8 + i) * 3;
+      ctx.strokeStyle = '#02040A'; ctx.lineWidth = 4 + 3 * U.hash(i, 1302); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(x, H + 10); ctx.quadraticCurveTo(x + lean * 0.2, H - h * 0.6, x + lean, H - h); ctx.stroke();
       if (wa > 0.05) dot(ctx, x + lean, H - h, 5, `rgba(226,234,246,${0.7 * wa})`);
     }
@@ -853,6 +903,7 @@
       const black = Math.max(1 - sm(t, 0, 1.8), sm(t, ev.eyeShut - 0.3, ev.dark), 1 - wA);
       if (black > 0.001) { ctx.fillStyle = `rgba(3,4,8,${black})`; ctx.fillRect(0, 0, W, H); }
       moonShot(ctx, t, moonAlpha(t));
+      journalPage(ctx, t);
       // заголовок и титры глав
       cardText(ctx, t, ev.title, 5.6, 'I', 'Одна ночь на Мерцаловой топи');
       const ROMAN = ['II', 'III', 'IV', 'V'];
