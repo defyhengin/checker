@@ -22,7 +22,7 @@
     [A(1, 8) - 1.4, A(1, 8) + 1.6, 1020, 560, 1.0],
     [A(1, 9), ev.e1, 1100, 560, 1.04],
     // переход 1 -> глава 2
-    [ev.e1, ev.c2 - 0.8, 2300, 610, 1.22],
+    [ev.c2 - 1.5, ev.c2 - 1.5, 2300, 620, 1.22],
     [ev.blow - 0.6, ev.blow + 1.2, 2240, 640, 1.45],
     [A(2, 5), A(2, 6) + 0.6, 2330, 620, 1.35],
     [ev.mute - 0.6, ev.mute + 1.0, 2560, 640, 1.42],
@@ -36,7 +36,7 @@
     [ev.mimicEyes, ev.mimicEyes, 4180, 560, 2.3],
     [ev.mimicEyes, ev.e2, 4180, 560, 2.45],
     // переход 2 -> глава 3
-    [ev.e2 + 0.3, ev.c3 - 0.6, 5200, 650, 1.05],
+    [ev.c3 - 1.5, ev.c3 - 1.5, 5200, 680, 1.12],
     [A(3, 2) - 0.5, A(3, 2) + 0.8, 5000, 680, 1.35],
     [A(3, 4) - 0.6, A(3, 4) + 0.8, 5110, 690, 1.6],
     [A(3, 7) - 0.6, A(3, 7) + 0.8, 5380, 650, 1.35],
@@ -48,7 +48,7 @@
     [ev.empty + 0.4, ev.land, 5320, 760, 2.15],
     [ev.land + 0.2, ev.e3, 5320, 750, 2.25],
     // переход 3 -> глава 4
-    [ev.e3 + 0.2, ev.c4 - 0.6, 6440, 600, 1.0],
+    [ev.c4 - 1.5, ev.c4 - 1.5, 6420, 640, 1.08],
     [A(4, 3) - 0.6, A(4, 3) + 0.8, 6350, 690, 1.4],
     [A(4, 4) - 0.6, A(4, 4) + 0.8, 6800, 690, 1.5],
     [A(4, 5) - 0.6, A(4, 5) + 0.8, 7200, 680, 1.48],
@@ -57,13 +57,13 @@
     [A(4, 12) - 1.4, ev.hush, 7330, 610, 1.28],
     [ev.hush, ev.e4, 7380, 610, 1.36],
     // переход 4 -> глава 5
-    [ev.e4 + 0.2, ev.c5 - 0.6, 8150, 600, 0.95],
+    [ev.c5 - 1.5, ev.c5 - 1.5, 8150, 640, 1.0],
     [ev.ice - 0.4, ev.ice + 1.5, 8150, 620, 1.0],
     [A(5, 7) - 0.4, A(5, 7) + 1.0, 8180, 660, 1.5],
     [A(5, 8) - 0.6, A(5, 8) + 1.2, 8150, 760, 1.18],
     [A(5, 10) - 1.4, A(5, 10) + 0.4, 8150, 600, 0.95],
-    [ev.down, ev.eye - 0.6, 8150, 930, 1.45],
-    [ev.eye - 0.6, ev.dark, 8150, 940, 1.5],
+    [ev.down, ev.eye - 0.6, 8150, 850, 1.42],
+    [ev.eye - 0.6, ev.dark, 8150, 855, 1.46],
   ];
   function cam(t) {
     let c = { x: MOVES[0][2], y: MOVES[0][3], z: MOVES[0][4] };
@@ -93,7 +93,30 @@
 
   // ---------- небо (экран) ----------
   const MX = W * 0.8, MY = H * 0.15, MR = 58;
-  const moonCv = document.createElement('canvas'); moonCv.width = 260; moonCv.height = 260;
+  const moonCv = document.createElement('canvas'); moonCv.width = 520; moonCv.height = 520;
+  // луна с укусами и крошками (R - радиус)
+  function drawMoon(ctx, t, mx, my, R, alpha, glowA) {
+    const left = S.moonLeft(t), w = dawn(t), m = moonCv.getContext('2d'), C0 = 260;
+    m.setTransform(1, 0, 0, 1, 0, 0); m.clearRect(0, 0, 520, 520);
+    G.ellipse(m, C0, C0, R, R, { fill: mixHex('#EFF2E6', '#F4E6E0', w), lw: 3, seed: 2, stroke: '#7E8AA8', hatch: { color: 'rgba(110,120,150,0.18)', gap: 8 } });
+    for (const [cx, cy, cr] of [[-0.3, -0.2, 0.18], [0.25, 0.3, 0.12], [-0.1, 0.4, 0.09]]) G.ellipse(m, C0 + cx * R, C0 + cy * R, cr * R, cr * R, { fill: 'rgba(170,180,200,0.35)', lw: 1.2, seed: 3 + cx * 10, stroke: 'rgba(126,138,168,0.5)' });
+    m.globalCompositeOperation = 'destination-out';
+    const e = C0 + R * (2 * left - 1);
+    m.fillRect(e + R * 0.2, 0, 520, 520);
+    for (let j = -4; j <= 4; j++) { m.beginPath(); m.arc(e + R * 0.2, C0 + j * R * 0.36, R * 0.24, 0, 7); m.fill(); }
+    m.globalCompositeOperation = 'source-over';
+    glow(ctx, mx, my, R * 2.4, '150,170,220', glowA);
+    ctx.save(); ctx.globalAlpha *= alpha; ctx.drawImage(moonCv, mx - C0, my - C0); ctx.restore();
+    ev.bites.forEach((b, i) => {
+      const age = t - b; if (age < 0 || age > 2.4) return;
+      const bx = mx + R * (2 * S.moonLeft(b + 0.01) - 1) + R * 0.2, by = my + R * 0.1, q = R / 58;
+      for (let j = 0; j < 14; j++) {
+        const vx = (U.hash(j, 50 + i) - 0.3) * 120 * q, vy = (U.hash(j, 60 + i) - 0.8) * 90 * q;
+        const x = bx + vx * age, y = by + vy * age + 200 * q * age * age, a = Math.exp(-age * 1.3);
+        dot(ctx, x, y, (1.6 + 1.8 * U.hash(j, 70)) * Math.sqrt(q), `rgba(245,248,230,${a})`); glow(ctx, x, y, 12 * q, '230,236,200', 0.4 * a);
+      }
+    });
+  }
   function sky(ctx, t, c) {
     const hy = hyOf(c), d = dusk(t), w = dawn(t);
     const g = ctx.createLinearGradient(0, 0, 0, hy);
@@ -107,29 +130,8 @@
       const x = ((U.hash(i, 1) * W * 1.6 - c.x * 0.03) % W + W) % W, y = U.hash(i, 2) * hy * 0.85, r = 0.8 + U.hash(i, 3) * 1.6;
       ctx.fillStyle = `rgba(230,236,255,${(0.3 + 0.5 * U.hash(i, 4)) * sa * (0.75 + 0.25 * Math.sin(t * 1.3 + i))})`; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
     }
-    // луна с укусами
     const left = S.moonLeft(t), mx = MX - (c.x - 4000) * 0.012, my = MY + (c.y - 560) * 0.1;
-    const m = moonCv.getContext('2d'), C0 = 130;
-    m.setTransform(1, 0, 0, 1, 0, 0); m.clearRect(0, 0, 260, 260);
-    G.ellipse(m, C0, C0, MR, MR, { fill: mixHex('#EFF2E6', '#F4E6E0', w), lw: 3, seed: 2, stroke: '#7E8AA8', hatch: { color: 'rgba(110,120,150,0.18)', gap: 8 } });
-    for (const [cx, cy, cr] of [[-0.3, -0.2, 0.18], [0.25, 0.3, 0.12], [-0.1, 0.4, 0.09]]) G.ellipse(m, C0 + cx * MR, C0 + cy * MR, cr * MR, cr * MR, { fill: 'rgba(170,180,200,0.35)', lw: 1.2, seed: 3 + cx * 10, stroke: 'rgba(126,138,168,0.5)' });
-    m.globalCompositeOperation = 'destination-out';
-    const e = C0 + MR * (2 * left - 1);
-    m.fillRect(e + MR * 0.2, 0, 260, 260);
-    for (let j = -4; j <= 4; j++) { m.beginPath(); m.arc(e + MR * 0.2, C0 + j * MR * 0.36, MR * 0.24, 0, 7); m.fill(); }
-    m.globalCompositeOperation = 'source-over';
-    glow(ctx, mx, my, MR * 2.4, '150,170,220', 0.25 * (0.4 + 0.6 * left) * (1 - 0.6 * d));
-    ctx.save(); ctx.globalAlpha = 1 - 0.35 * w; ctx.drawImage(moonCv, mx - C0, my - C0); ctx.restore();
-    // крошки после укуса
-    ev.bites.forEach((b, i) => {
-      const age = t - b; if (age < 0 || age > 2.4) return;
-      const bx = mx + MR * (2 * S.moonLeft(b + 0.01) - 1) + MR * 0.2, by = my + MR * 0.1;
-      for (let j = 0; j < 12; j++) {
-        const vx = (U.hash(j, 50 + i) - 0.3) * 120, vy = (U.hash(j, 60 + i) - 0.8) * 90;
-        const x = bx + vx * age, y = by + vy * age + 200 * age * age, a = Math.exp(-age * 1.3);
-        dot(ctx, x, y, 1.6 + 1.8 * U.hash(j, 70), `rgba(245,248,230,${a})`); glow(ctx, x, y, 12, '230,236,200', 0.4 * a);
-      }
-    });
+    drawMoon(ctx, t, mx, my, MR, (1 - 0.35 * w), 0.25 * (0.4 + 0.6 * left) * (1 - 0.6 * d));
     return { mx, my };
   }
 
@@ -216,7 +218,7 @@
   // пустые зоны, где стоят существа (там не сажаем случайные листья)
   const BUSY = [[600, 1450], [2050, 2850], [2950, 4300], [4650, 5750], [6050, 7400], [7700, 8650]];
   const busy = (x) => BUSY.some(([a, b]) => x > a && x < b);
-  function ground(ctx, t, L, R) {
+  function ground(ctx, t, L, R, ci) {
     // камыши по дальнему берегу
     for (let i = Math.floor(L / 70); i <= Math.ceil(R / 70); i++) {
       const x = i * 70 + U.hash(i, 50) * 60, h = 50 + 80 * U.hash(i, 51), lean = (U.hash(i, 52) - 0.5) * 0.25 * h;
@@ -225,11 +227,12 @@
     // листья кувшинок в воде
     for (let i = Math.floor(L / 260); i <= Math.ceil(R / 260); i++) {
       const x = i * 260 + U.hash(i, 60) * 200, y = 640 + U.hash(i, 61) * 380;
-      if (busy(x) && y < 900) continue;
+      if ((busy(x) && y < 900) || (ci === 4 && x > 7550 && x < 8750 && y > 720)) continue;
       pad(ctx, x, y, 60 + 80 * U.hash(i, 62), 16 + 18 * U.hash(i, 63), 500 + (i & 255), t);
     }
   }
-  function fgReeds(ctx, t, L, R) {
+  function fgReeds(ctx, t, L, R, ci) {
+    if (ci === 4) return;
     for (let i = Math.floor(L / 330); i <= Math.ceil(R / 330); i++) {
       if (U.hash(i, 80) < 0.45) continue;
       const x = i * 330 + U.hash(i, 81) * 200;
@@ -407,7 +410,7 @@
 
   // ---------- глава 3: Праздник ----------
   const TB = { x: 5200, y: 705 };
-  const GUEST = { babies: [5070, 5135, 5200, 5265, 5330].map((x) => [x, 686]), sob: [4990, 812], puz: [5480, 812], bay: [5625, 805], chair: [5345, 915], mokh: [4865, 790] };
+  const GUEST = { babies: [5070, 5135, 5200, 5265, 5330].map((x) => [x, 686]), sob: [4990, 812], puz: [5480, 812], bay: [5625, 805], chair: [5380, 868], mokh: [4865, 790] };
   const PLATE = [5330, 730];
   function candles(ctx, t) {
     const twitch = t >= ev.twitch ? Math.exp(-(t - ev.twitch) * 1.6) : 0;
@@ -452,7 +455,7 @@
     return [x, y];
   }
   function set3(ctx, t) {
-    mossBlob(ctx, 5200, 800, 560, 92, 71, t);
+    mossBlob(ctx, 5200, 805, 600, 125, 71, t);
     // Мохнач спиной: каждый глаз смотрит на своего гостя
     const targets = [...GUEST.babies, GUEST.sob, GUEST.puz, GUEST.bay, GUEST.chair];
     CR.mokhnachBack(ctx, GUEST.mokh[0], GUEST.mokh[1], 0.55, t, {
@@ -540,12 +543,12 @@
     }
     // норка Собиралки
     mossBlob(ctx, BURROW.x, BURROW.y + 10, 120, 44, 85, t);
-    G.ellipse(ctx, BURROW.x + 10, BURROW.y - 8, 34, 22, { fill: '#05070A', lw: 3, seed: 1630, stroke: '#0A1A16' });
+    G.ellipse(ctx, BURROW.x + 46, BURROW.y + 16, 24, 15, { fill: '#05070A', lw: 3, seed: 1630, stroke: '#0A1A16' });
     const sobX = lerp(6745, 6600, sm(t, A(4, 9), A(4, 9) + 2.5)), sobMoving = t > A(4, 9) && t < A(4, 9) + 2.5 ? 1 : 0;
     CR.sobiralka(ctx, sobX, 790, 0.8, t, { face: 1, walk: t * 2.2, moving: sobMoving, reach: ev.mittens.some((m) => t > m - 0.4 && t < m + 0.1) ? 1 : 0, items: t < ev.mittens[2] ? 1 : 0 });
     ev.mittens.forEach((m, i) => {
       if (t < m - 0.45 || t > m + 0.05) return;
-      const p = ease.inQuad(r01(t, m - 0.45, m)), x = lerp(6745 - 10, BURROW.x + 10, p), y = lerp(790 - 180, BURROW.y - 8, p) - Math.sin(p * Math.PI) * 60;
+      const p = ease.inQuad(r01(t, m - 0.45, m)), x = lerp(6745 - 10, BURROW.x + 46, p), y = lerp(790 - 180, BURROW.y + 16, p) - Math.sin(p * Math.PI) * 60;
       CR.mitten(ctx, x, y, 1.1, p * 4, ['#9A3E3A', '#3E5A9A', '#9A8A3A'][i]);
     });
     // Пузырёк закатывает звуки лета в пузыри
@@ -574,31 +577,60 @@
   }
 
   // ---------- глава 5: Рассвет ----------
-  const EYE = { x: 8150, y: 985 };
-  function eyeOpen(t) { return sm(t, ev.eye - 0.02, ev.eye + 0.32) * (1 - sm(t, ev.eyeShut - 0.9, ev.eyeShut)); }
+  function eyeOpen(t) { return sm(t, ev.eye - 0.02, ev.eye + 0.14) * (1 - sm(t, ev.eyeShut - 0.7, ev.eyeShut)); }
+  const EYE = { x: 8150, y: 785, rx: 480, ry: 225 };
   function underIce(ctx, t) {
-    // спящие огоньки подо льдом
-    for (let i = 0; i < 9; i++) {
-      const x = 7760 + i * 95 + U.hash(i, 300) * 50, y = 780 + U.hash(i, 301) * 200, a = 0.25 + 0.1 * Math.sin(t * 0.8 + i * 1.7);
-      const flick = i === 5 ? (U.noise1(t * 2.6, 9) > 0.3 ? 1.6 : 0.4) : 1;
+    // спящие огоньки подо льдом; в тишине перед глазом гаснут по одному
+    for (let i = 0; i < 11; i++) {
+      const x = 7720 + i * 85 + U.hash(i, 300) * 50, y = 780 + U.hash(i, 301) * 260;
+      const off = sm(t, ev.eye - 2.3 + i * 0.17, ev.eye - 2.15 + i * 0.17);
+      const a = (0.25 + 0.1 * Math.sin(t * 0.8 + i * 1.7)) * (1 - off), flick = i === 5 ? (U.noise1(t * 2.6, 9) > 0.3 ? 1.6 : 0.4) : 1;
       glow(ctx, x, y, 60, COLD, a * flick); dot(ctx, x, y, 3, `rgba(230,255,215,${0.5 * a * flick})`);
     }
-    // глаз
     const o = eyeOpen(t);
-    if (o > 0.005) {
-      const rx = 270, ry = 150 * o;
-      glow(ctx, EYE.x, EYE.y, 420, '90,200,210', 0.35 * o);
-      ctx.save(); ctx.beginPath(); ctx.ellipse(EYE.x, EYE.y, rx, Math.max(1, ry), 0, 0, 7); ctx.clip();
-      const sg = ctx.createRadialGradient(EYE.x, EYE.y, 40, EYE.x, EYE.y, rx); sg.addColorStop(0, '#B4C6C4'); sg.addColorStop(1, '#5E7478'); ctx.fillStyle = sg; ctx.fillRect(EYE.x - rx, EYE.y - 150, rx * 2, 300);
-      const look = U.noise1(t * 0.7, 4) * 10, irisR = 105;
-      const ig = ctx.createRadialGradient(EYE.x + look, EYE.y, 10, EYE.x + look, EYE.y, irisR);
-      ig.addColorStop(0, '#9FF0EA'); ig.addColorStop(0.6, '#3AA9A8'); ig.addColorStop(1, '#0E3A44');
-      ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(EYE.x + look, EYE.y, irisR, 0, 7); ctx.fill();
-      const pw = lerp(26, 9, sm(t, ev.eye + 0.4, ev.eye + 1.2));
-      ctx.fillStyle = '#020406'; ctx.beginPath(); ctx.ellipse(EYE.x + look, EYE.y, pw, 92, 0, 0, 7); ctx.fill();
-      dot(ctx, EYE.x + look - 40, EYE.y - 46, 14, 'rgba(255,255,255,0.85)');
-      ctx.restore();
-      ctx.strokeStyle = '#0A1418'; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(EYE.x, EYE.y, rx, Math.max(1, ry), 0, 0, 7); ctx.stroke();
+    if (o <= 0.005) return;
+    const { x: ex, y: ey, rx } = EYE, ry = EYE.ry * o;
+    // складки кожи вокруг глаза подо льдом
+    ctx.strokeStyle = `rgba(20,22,16,${0.55 * o})`; ctx.lineWidth = 5;
+    for (let j = 1; j <= 3; j++) { ctx.beginPath(); ctx.ellipse(ex, ey + 10 * j, rx + 40 * j, EYE.ry * o + 26 * j, 0, 0.12, Math.PI - 0.12); ctx.stroke(); }
+    glow(ctx, ex, ey, 620, '200,180,110', 0.16 * o);
+    ctx.save(); ctx.beginPath(); ctx.ellipse(ex, ey, rx, Math.max(1, ry), 0, 0, 7); ctx.clip();
+    const sg = ctx.createRadialGradient(ex, ey, 60, ex, ey, rx); sg.addColorStop(0, '#A9A07C'); sg.addColorStop(0.6, '#7E7654'); sg.addColorStop(1, '#2E2A1C');
+    ctx.fillStyle = sg; ctx.fillRect(ex - rx, ey - EYE.ry, rx * 2, EYE.ry * 2);
+    // прожилки
+    for (let i = 0; i < 18; i++) {
+      const side = i % 2 ? 1 : -1, y0 = ey + (U.hash(i, 330) - 0.5) * EYE.ry * 1.4;
+      let px = ex + side * rx, py = y0;
+      ctx.strokeStyle = `rgba(140,40,30,${0.35 + 0.3 * U.hash(i, 331)})`; ctx.lineWidth = 2 + 2 * U.hash(i, 332);
+      ctx.beginPath(); ctx.moveTo(px, py);
+      for (let j = 0; j < 6; j++) { px -= side * (30 + 25 * U.hash(i * 7 + j, 333)); py += (U.hash(i * 7 + j, 334) - 0.5) * 30 + (ey - py) * 0.12; ctx.lineTo(px, py); }
+      ctx.stroke();
+    }
+    // радужка: мутная, болотная; зрачок круглый и сжимается, когда видит
+    const lk = U.noise1(t * 1.3, 4) * 6, ix = ex + lk, iy = ey + 6, IR = 140;
+    const ig = ctx.createRadialGradient(ix, iy, 10, ix, iy, IR);
+    ig.addColorStop(0, '#1A1A0E'); ig.addColorStop(0.35, '#6E5A26'); ig.addColorStop(0.7, '#3E4A26'); ig.addColorStop(1, '#141810');
+    ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(ix, iy, IR, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,170,90,0.35)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 46; i++) { const an = i / 46 * 7 + U.hash(i, 340) * 0.1, r0 = 45 + 10 * U.hash(i, 341), r1 = IR * (0.8 + 0.18 * U.hash(i, 342)); ctx.beginPath(); ctx.moveTo(ix + Math.cos(an) * r0, iy + Math.sin(an) * r0); ctx.lineTo(ix + Math.cos(an) * r1, iy + Math.sin(an) * r1); ctx.stroke(); }
+    const pr = lerp(52, 17, sm(t, ev.eye + 0.45, ev.eye + 1.1));
+    dot(ctx, ix, iy, pr, '#020302');
+    dot(ctx, ix - 48, iy - 52, 11, 'rgba(255,255,240,0.55)'); dot(ctx, ix - 30, iy - 60, 4, 'rgba(255,255,240,0.5)');
+    // тень верхнего века-берега
+    ctx.fillStyle = 'rgba(150,180,215,0.12)'; ctx.fillRect(ex - rx, ey - EYE.ry, rx * 2, EYE.ry * 2);
+    const sh = ctx.createLinearGradient(0, ey - ry, 0, ey - ry + 120); sh.addColorStop(0, 'rgba(10,12,8,0.75)'); sh.addColorStop(1, 'rgba(10,12,8,0)');
+    ctx.fillStyle = sh; ctx.fillRect(ex - rx, ey - ry, rx * 2, 120);
+    ctx.restore();
+    ctx.strokeStyle = '#141208'; ctx.lineWidth = 9; ctx.beginPath(); ctx.ellipse(ex, ey, rx, Math.max(1, ry), 0, 0, Math.PI); ctx.stroke();
+    // лёд трескается от глаза
+    const cr = r01(t, ev.eye, ev.eye + 0.9);
+    ctx.strokeStyle = `rgba(240,248,255,${0.7 * o})`; ctx.lineWidth = 2.5;
+    for (let i = 0; i < 9; i++) {
+      const an = Math.PI * (0.1 + 0.8 * (i / 8)), L = (260 + 160 * U.hash(i, 350)) * cr;
+      let px = ex + Math.cos(an) * rx * 0.8, py = ey + Math.sin(an) * EYE.ry * 0.6;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      for (let j = 1; j <= 4; j++) { px += Math.cos(an + (U.hash(i * 5 + j, 351) - 0.5)) * L / 4; py += Math.sin(an + (U.hash(i * 5 + j, 352) - 0.5)) * L / 4; ctx.lineTo(px, py); }
+      ctx.stroke();
     }
   }
   function cracks(ctx, t) {
@@ -612,7 +644,9 @@
     }
   }
   function set5over(ctx, t) {
-    // берег со спящими
+    // берег со спящими - это верхнее веко: поднимается, когда глаз открывается
+    const lid = eyeOpen(t);
+    ctx.save(); ctx.translate(8150, 700); ctx.rotate(-0.015 * lid); ctx.translate(-8150, -700 + -70 * lid + Math.sin(t * 40) * 3 * lid * (1 - r01(t, ev.eye, ev.eye + 0.6)));
     mossBlob(ctx, 8150, 690, 520, 40, 91, t);
     [7840, 7905, 7970].forEach((x, i) => CR.baby(ctx, x, 690, 0.5, t, { sleep: 1 }, i));
     CR.mossMound(ctx, 8070, 702, 0.45, t);
@@ -620,6 +654,9 @@
     CR.sobiralka(ctx, 8390, 700, 0.5, t, { sleep: 1, face: 0 });
     // Баюнок - единственный не спит
     CR.bayunok(ctx, 8545, 700, 0.75, t, { sway: Math.sin(t * 0.8) * 0.2, turn: 0.2, gx: 0.3, gy: 0.4 });
+    // тёмная кромка века под берегом
+    if (lid > 0.01) { ctx.fillStyle = `rgba(20,20,12,${0.9 * lid})`; ctx.beginPath(); ctx.ellipse(8150, 735, 500, 26 * lid, 0, 0, Math.PI); ctx.fill(); }
+    ctx.restore();
     cracks(ctx, t);
   }
 
@@ -628,11 +665,12 @@
     const a = sm(t, t0, t0 + 0.8) * (1 - sm(t, t0 + dur - 0.8, t0 + dur));
     if (a <= 0.01) return;
     ctx.save(); ctx.globalAlpha = a;
-    const bg = ctx.createRadialGradient(W / 2, H * 0.43, 20, W / 2, H * 0.43, 620); bg.addColorStop(0, 'rgba(3,5,14,0.55)'); bg.addColorStop(1, 'rgba(3,5,14,0)');
+    const bcx = small === 'I' ? W / 2 : W * 0.28, bg = ctx.createRadialGradient(bcx, H * 0.43, 20, bcx, H * 0.43, 620); bg.addColorStop(0, 'rgba(3,5,14,0.55)'); bg.addColorStop(1, 'rgba(3,5,14,0)');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    G.text(ctx, small, W / 2, H * 0.4, { size: 34, fam: 'Inter', weight: 700, color: '#C9D2E8', align: 'center', boil: 0 });
-    G.text(ctx, big, W / 2, H * 0.4 + 82, { size: 70, fam: 'Inter', weight: 800, color: '#EEF1F8', align: 'center', boil: 0 });
-    ctx.strokeStyle = 'rgba(201,210,232,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(W / 2 - 90, H * 0.4 + 18); ctx.lineTo(W / 2 + 90, H * 0.4 + 18); ctx.stroke();
+    const cx = small === 'I' ? W / 2 : W * 0.28;
+    G.text(ctx, small, cx, H * 0.4, { size: 34, fam: 'Inter', weight: 700, color: '#C9D2E8', align: 'center', boil: 0 });
+    G.text(ctx, big, cx, H * 0.4 + 82, { size: 70, fam: 'Inter', weight: 800, color: '#EEF1F8', align: 'center', boil: 0 });
+    ctx.strokeStyle = 'rgba(201,210,232,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 90, H * 0.4 + 18); ctx.lineTo(cx + 90, H * 0.4 + 18); ctx.stroke();
     ctx.restore();
   }
   const pix = document.createElement('canvas');
@@ -665,24 +703,143 @@
     ctx.restore(); glow(ctx, x, y, 40, '230,240,255', 0.3 * a);
   }
 
-  // ---------- кадр ----------
-  const SETS = [[0, 1900, set1], [1950, 4450, set2], [4600, 5800, set3], [5950, 7600, set4], [7650, 8700, set5over]];
+  // ---------- густота: туман, кочки, коряги, ряска, светлячки, рамка ----------
+  function fog(ctx, t, c) {
+    const hy = hyOf(c), w = dawn(t);
+    for (let i = 0; i < 16; i++) {
+      const x = ((i * 190 + U.hash(i, 600) * 120 - c.x * 0.3 + t * (6 + 4 * U.hash(i, 601))) % (W + 600) + W + 600) % (W + 600) - 300;
+      const y = hy + (U.hash(i, 602) - 0.4) * 50 * c.z, r = (150 + 120 * U.hash(i, 603)) * c.z;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const col = w > 0.5 ? '200,190,215' : '140,160,205';
+      g.addColorStop(0, `rgba(${col},${0.13 + 0.05 * w})`); g.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = g; ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.32); ctx.translate(-x, -y); ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.restore();
+    }
+  }
+  function tufts(ctx, cx, cy, rx, seed, t) {
+    const n = Math.round(rx / 9);
+    for (let i = 0; i < n; i++) {
+      const x = cx + (U.hash(seed, i + 200) - 0.5) * rx * 1.7, h = 10 + 16 * U.hash(seed, i + 201), lean = (U.hash(seed, i + 202) - 0.5) * 10 + Math.sin(t * 1.1 + i) * 1.5;
+      ctx.strokeStyle = U.hash(seed, i + 203) < 0.5 ? '#2E5A3E' : '#18342C'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(x, cy); ctx.quadraticCurveTo(x + lean * 0.3, cy - h * 0.6, x + lean, cy - h); ctx.stroke();
+    }
+  }
+  function snag(ctx, x, base, h, seed) {
+    G.line(ctx, [[x, base], [x + 6, base - h * 0.5], [x - 4, base - h]], { color: '#0A0F20', lw: 9, seed });
+    G.line(ctx, [[x + 3, base - h * 0.55], [x + 38, base - h * 0.75], [x + 52, base - h * 0.72]], { color: '#0A0F20', lw: 5, seed: seed + 1 });
+    G.line(ctx, [[x - 2, base - h * 0.78], [x - 34, base - h * 0.95]], { color: '#0A0F20', lw: 4, seed: seed + 2 });
+  }
+  function details(ctx, t, L, R, ci) {
+    // кочки с травой вдоль дальнего берега, коряги
+    for (let i = Math.floor(L / 170); i <= Math.ceil(R / 170); i++) {
+      const x = i * 170 + U.hash(i, 610) * 120, y = 588 + U.hash(i, 611) * 30, rx = 40 + 50 * U.hash(i, 612);
+      G.ellipse(ctx, x, y, rx, rx * 0.22, { fill: '#13302E', lw: 2.5, seed: 620 + (i & 127), stroke: '#081615' });
+      tufts(ctx, x, y - rx * 0.1, rx, 630 + (i & 127), t);
+      if (U.hash(i, 613) < 0.18) snag(ctx, x + 20, y - 2, 120 + 90 * U.hash(i, 614), 650 + (i & 63));
+    }
+    // ряска и рябь
+    for (let i = Math.floor(L / 120); i <= Math.ceil(R / 120); i++) {
+      const x = i * 120 + U.hash(i, 640) * 100, y = 650 + U.hash(i, 641) * 420;
+      if ((busy(x) && y < 880) || ci === 4) continue;
+      for (let j = 0; j < 7; j++) dot(ctx, x + (U.hash(i * 9 + j, 642) - 0.5) * 60, y + (U.hash(i * 9 + j, 643) - 0.5) * 14, 2 + 2 * U.hash(i * 9 + j, 644), 'rgba(60,110,80,0.7)');
+      ctx.strokeStyle = 'rgba(170,195,230,0.18)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + 40, y + 20, 30 + 10 * Math.sin(t + i), 5, 0, 0, 7); ctx.stroke();
+    }
+    // камыши в середине воды (там, где нет существ) и кочки на переднем плане
+    for (let i = Math.floor(L / 260); i <= Math.ceil(R / 260); i++) {
+      const x = i * 260 + U.hash(i, 660) * 160, y = 720 + U.hash(i, 661) * 200;
+      if (busy(x) || ci === 4) continue;
+      mossBlob(ctx, x, y + 6, 60, 16, 670 + (i & 63), t); tufts(ctx, x, y, 60, 680 + (i & 63), t);
+      for (let j = 0; j < 5; j++) reed(ctx, x - 30 + j * 14, y, 90 + 70 * U.hash(i * 5 + j, 662), (U.hash(i * 5 + j, 663) - 0.5) * 30, (i * 5 + j + 40) & 255, t);
+    }
+    for (let i = Math.floor(L / 420); i <= Math.ceil(R / 420); i++) {
+      const x = i * 420 + U.hash(i, 690) * 240, y = 1050 + U.hash(i, 691) * 60;
+      if (ci === 4) continue;
+      mossBlob(ctx, x, y, 140, 34, 700 + (i & 63), t); tufts(ctx, x, y - 10, 140, 710 + (i & 63), t);
+    }
+    // летающие светлячки (зимой их нет)
+    const fa = [1, 1, 0.9, 0.3, 0][ci];
+    if (fa > 0) for (let i = Math.floor(L / 150); i <= Math.ceil(R / 150); i++) {
+      if (U.hash(i, 720) < 0.35) continue;
+      const x = i * 150 + U.hash(i, 721) * 120 + U.noise1(t * 0.25 + i, 3) * 60, y = 560 + U.hash(i, 722) * 300 + U.noise1(t * 0.3 + i, 4) * 40;
+      const tw = 0.5 + 0.5 * Math.sin(t * (1.5 + U.hash(i, 723)) + i);
+      glow(ctx, x, y, 26, U.hash(i, 724) < 0.3 ? COLD : WARM, 0.35 * tw * fa); dot(ctx, x, y, 2.2, `rgba(255,240,200,${0.8 * tw * fa})`);
+    }
+  }
+  // рамка кадра: тёмные ветви сверху по углам и трава снизу (экран)
+  function frame(ctx, t, c) {
+    const wa = whiteAmt(t), sway = Math.sin(t * 0.5) * 6;
+    // тяжёлые еловые лапы свисают сверху по углам
+    const bough = (x0, y0, dir, len, droop, seed) => {
+      const N = 22, up = [], low = [];
+      for (let i = 0; i <= N; i++) {
+        const u = i / N, x = x0 + dir * len * u, y = y0 + droop * u * u + Math.sin(t * 0.5 + seed) * 4 * u;
+        const th = 14 * (1 - u) + 4, hang = (46 * (1 - u * 0.7) + 10) * (i % 2 ? 1 : 0.55);
+        up.push([x, y - th]); low.push([x + dir * 6, y + hang]);
+      }
+      G.poly(ctx, [...up, ...low.reverse()], { fill: '#02040A', lw: 2, seed, stroke: '#02040A' });
+      if (wa > 0.05) { ctx.fillStyle = `rgba(226,234,246,${0.8 * wa})`; for (let i = 1; i < N; i += 2) { const u = i / N; ctx.beginPath(); ctx.ellipse(x0 + dir * len * u, y0 + droop * u * u - 12 * (1 - u) - 4, 14, 4, 0, 0, 7); ctx.fill(); } }
+    };
+    const px = -c.x * 0.01 % 30;
+    bough(-40 + px, 30, 1, 480, 120, 1100); bough(-40 + px, -20, 1, 340, 150, 1101); bough(-20 + px, 110, 1, 260, 90, 1102);
+    bough(W + 40 + px, 10, -1, 420, 140, 1200); bough(W + 30 + px, -30, -1, 300, 110, 1201);
+    // трава у объектива
+    for (let i = 0; i < 26; i++) {
+      const side = i < 13 ? 0 : 1, j = i % 13, x = side ? W - j * 26 - 10 : j * 26 + 10, h = 140 + 160 * U.hash(i, 1300) * (1 - j / 16);
+      const lean = (side ? -1 : 1) * (20 + 30 * U.hash(i, 1301)) + Math.sin(t * 0.8 + i) * 6;
+      ctx.strokeStyle = '#02040A'; ctx.lineWidth = 7 + 4 * U.hash(i, 1302); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, H + 10); ctx.quadraticCurveTo(x + lean * 0.2, H - h * 0.6, x + lean, H - h); ctx.stroke();
+      if (wa > 0.05) dot(ctx, x + lean, H - h, 5, `rgba(226,234,246,${0.7 * wa})`);
+    }
+  }
+
+  // ---------- кадр: главы - отдельные сцены, между ними небо и Луноед ----------
+  const SETS = [set1, set2, set3, set4, set5over];
+  const activeCh = (t) => { for (let i = 0; i < 4; i++) if (t < (S.CH[i].end + S.CH[i + 1].start) / 2) return i; return 4; };
+  function worldAlpha(t) {
+    for (let i = 0; i < 4; i++) { const e = S.CH[i].end, c = S.CH[i + 1].start; if (t >= e && t < c) return 1 - sm(t, e, e + 0.9) + sm(t, c - 1.5, c - 0.5); }
+    return 1;
+  }
+  function moonAlpha(t) {
+    for (let i = 0; i < 4; i++) { const e = S.CH[i].end, c = S.CH[i + 1].start; if (t >= e && t < c) return sm(t, e + 0.6, e + 1.5) * (1 - sm(t, c - 2.3, c - 1.5)); }
+    return 0;
+  }
+  // общий план неба между главами: луна крупно, Луноед на верхушке ели откусывает
+  function moonShot(ctx, t, a) {
+    if (a <= 0.01) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const d = dusk(t), w = dawn(t), i = activeCh(t);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, mixHex('#0B1030', '#1A2350', w)); g.addColorStop(1, mixHex('#25325C', '#5A5884', w));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (let k = 0; k < 160; k++) { const x = U.hash(k, 11) * W, y = U.hash(k, 12) * H, r = 0.8 + U.hash(k, 13) * 1.6; dot(ctx, x, y, r, `rgba(230,236,255,${(0.3 + 0.5 * U.hash(k, 14)) * (1 - 0.8 * w) * (0.75 + 0.25 * Math.sin(t * 1.3 + k))})`); }
+    const drift = (t % 100) * 3;
+    drawMoon(ctx, t, W * 0.6 - drift * 0.2, H * 0.4, 150, 1 - 0.3 * w, 0.35);
+    // ели снизу и Луноед на самой высокой
+    for (let k = 0; k < 14; k++) { const x = k * 150 + U.hash(k, 15) * 80 - 40, h = 220 + 160 * U.hash(k, 16); spruce(ctx, x, H + 30, h, '#070C1E', 1000 + k, '#03050C'); snowCap(ctx, x, H + 30, h, whiteAmt(t)); }
+    spruce(ctx, W * 0.83, H + 30, 520, '#060A1A', 1020, '#03050C'); snowCap(ctx, W * 0.83, H + 30, 520, whiteAmt(t));
+    const b = ev.bites.find((x) => Math.abs(x - t) < 4) || ev.bites[1];
+    const reach = bump(t, b - 0.8, b - 0.05, b + 0.5), chew = t > b && t < b + 1.6 ? 1 - (t - b) / 1.6 : 0;
+    CR.lunoed(ctx, W * 0.832, H + 30 - 520 + 4, 0.75, t, { reach, chew, look: -0.5, moon: S.moonLeft(t) });
+    if (i >= 3 || t > ev.snow) snow(ctx, t);
+    ctx.restore();
+  }
   function world(ctx, t) {
-    const c = cam(t);
+    const c = cam(t), ci = activeCh(t);
     const moon = sky(ctx, t, c);
     far(ctx, t, c);
     water(ctx, t, c, moon);
+    fog(ctx, t, c);
     ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(c.z, c.z); ctx.translate(-c.x, -c.y);
     const L = c.x - W / (2 * c.z) - 300, R = c.x + W / (2 * c.z) + 300;
-    // подо льдом (глава 5) - до наложения льда
-    if (R > 7650) underIce(ctx, t);
+    if (ci === 4) underIce(ctx, t);
     ctx.restore();
     iceOverlay(ctx, t, c);
     ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(c.z, c.z); ctx.translate(-c.x, -c.y);
-    ground(ctx, t, L, R);
-    for (const [a, b, fn] of SETS) if (b > L && a < R) fn(ctx, t);
-    fgReeds(ctx, t, L, R);
+    ground(ctx, t, L, R, ci);
+    details(ctx, t, L, R, ci);
+    SETS[ci](ctx, t);
+    fgReeds(ctx, t, L, R, ci);
     ctx.restore();
+    frame(ctx, t, c);
     snow(ctx, t);
     firstFlake(ctx, t);
   }
@@ -690,14 +847,16 @@
   Studio.film({
     draw(ctx, t) {
       ctx.fillStyle = '#030408'; ctx.fillRect(0, 0, W, H);
-      if (t < ev.dark) world(ctx, t);
-      // из темноты - в начале, в темноту - после глаза
-      const black = Math.max(1 - sm(t, 0, 1.8), sm(t, ev.eyeShut - 0.3, ev.dark));
+      const wA = worldAlpha(t);
+      if (t < ev.dark && wA > 0.001) world(ctx, t);
+      // из темноты - в начале, в темноту - после глаза и между главами
+      const black = Math.max(1 - sm(t, 0, 1.8), sm(t, ev.eyeShut - 0.3, ev.dark), 1 - wA);
       if (black > 0.001) { ctx.fillStyle = `rgba(3,4,8,${black})`; ctx.fillRect(0, 0, W, H); }
+      moonShot(ctx, t, moonAlpha(t));
       // заголовок и титры глав
       cardText(ctx, t, ev.title, 5.6, 'I', 'Одна ночь на Мерцаловой топи');
       const ROMAN = ['II', 'III', 'IV', 'V'];
-      ev.cards.forEach((c0, i) => cardText(ctx, t, c0, 3.4, ROMAN[i], S.CH[i + 1].name));
+      ev.cards.forEach((c0, i) => cardText(ctx, t, c0, 3.6, ROMAN[i], S.CH[i + 1].name));
       Subs.draw(ctx, t, S.subtitles, { style: 'clean', size: 46, y: H * 0.86, fam: 'Inter', maxW: W * 0.7, x: W * 0.5 });
       // финал: журнал записи
       if (t >= ev.rec) {

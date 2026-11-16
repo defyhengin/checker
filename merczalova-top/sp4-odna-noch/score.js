@@ -140,7 +140,7 @@
   ev.title = 0.8;
   for (let c = 1; c <= 5; c++) { ev['c' + c] = CH[c - 1].start; ev['e' + c] = CH[c - 1].end; }
   // титры глав - в середине перехода
-  ev.cards = [2, 3, 4, 5].map((c) => CH[c - 1].start - 4.2);
+  ev.cards = [2, 3, 4, 5].map((c) => CH[c - 1].start - 6.2);
   // ---- глава 1
   ev.mossWake = Q(A(1, 3) + 0.5);              // шляпки открываются на восьмые
   ev.lightOn = Q(A(1, 4) + 0.35);              // огоньки зажигаются один за другим
@@ -243,8 +243,8 @@
 
   const markers = {
     c1: ev.c1, c2: ev.c2, c3: ev.c3, c4: ev.c4, c5: ev.c5,
-    bite1: { t: ev.bite1, sync: 'av' },
-    pop: { t: ev.pop, sync: 'av' },
+    bite1: ev.bite1,
+    pop: ev.pop,
     mimic: { t: ev.mimicEyes, sync: 'av' },
     twitch: ev.twitch, land: ev.land, hush: ev.hush,
     eye: { t: ev.eye, sync: 'av' },
