@@ -7,6 +7,7 @@
   const { glow, dot, orb, r01, sm } = CR;
   const W = G.W, H = G.H;
   const HY = 540;                                   // горизонт в мире
+  const PORTRAIT = H > W;                           // Shorts 9:16: те же сцены, крупнее, без неба-перехода
   const bump = (t, a, b, c) => sm(t, a, b) * (1 - sm(t, b, c));
   const pop = (t, t0, d = 0.3) => { const p = r01(t, t0 - 0.03, t0 + d); return p <= 0 ? 0 : p >= 1 ? 1 : ease.outBack(p); };
   const WARM = '255,200,116', COLD = '170,255,150';
@@ -75,6 +76,7 @@
     }
     // чуть «дышит», как камера на штативе в болоте
     c.x += U.noise1(t * 0.15, 3) * 6; c.y += U.noise1(t * 0.12, 4) * 4;
+    if (PORTRAIT) { c.z = Math.min(2.4, c.z * 1.55); c.y += 70; if (t > ev.empty - 1.6 && t < ev.e3 + 1) c.x += 30 * sm(t, ev.empty - 1.6, ev.empty); }
     return c;
   }
   const hyOf = (c) => H / 2 + (HY - c.y) * c.z;
@@ -676,8 +678,8 @@
     if (t < t0 || t >= ev.mimicEyes) return;
     const sl = ease.outQuad(r01(t, t0, t0 + 0.7));
     ctx.save(); ctx.fillStyle = `rgba(3,4,10,${0.45 * sl})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    const PW = 1180, PH = 720, cx = W / 2, cy = H * 0.455 + (1 - sl) * H * 0.7;
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.018);
+    const PW = 1180, PH = 720, cx = W / 2, cy = H * (PORTRAIT ? 0.5 : 0.455) + (1 - sl) * H * 0.7;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.018); if (PORTRAIT) ctx.scale((W - 70) / PW, (W - 70) / PW);
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-PW / 2 + 12, -PH / 2 + 16, PW, PH);
     ctx.fillStyle = '#E9DFC6'; ctx.fillRect(-PW / 2, -PH / 2, PW, PH);
     ctx.strokeStyle = 'rgba(120,140,180,0.25)'; ctx.lineWidth = 1.5;
@@ -708,6 +710,24 @@
     }
     word(ctx, 'а его?..', mx - 290, my + 16, sm(t, M[5] + 0.2, M[5] + 0.6), 50, -0.06);
     ctx.restore();
+  }
+
+
+  // ---------- концовка Shorts: вместо неба - журнал записи и название главы ----------
+  const SHORT_LOG = ['21:06', '23:14', '00:31', '04:48', '06:12'];
+  function shortEnd(ctx, t) {
+    for (let i = 0; i < 4; i++) {
+      const e = S.CH[i].end, c = S.CH[i + 1].start;
+      if (t < e + 0.9 || t >= c) continue;
+      const a = r01(t, e + 0.9, e + 1.2);
+      ctx.save(); ctx.globalAlpha = a;
+      const blink = Math.floor((t - e) * 2) % 2 === 0;
+      pixelText(ctx, `${blink ? '●' : ' '} REC  ${SHORT_LOG[i]}:${String(7 + Math.floor(t - e)).padStart(2, '0')}`, W / 2, H * 0.44, 4, '#C9D2E8');
+      ctx.globalAlpha = a * sm(t, e + 1.3, e + 1.8);
+      G.text(ctx, 'Одна ночь на Мерцаловой топи', W / 2, H * 0.53, { size: 50, fam: 'Inter', weight: 800, color: '#EEF1F8', align: 'center', boil: 0 });
+      G.text(ctx, `глава ${['I', 'II', 'III', 'IV', 'V'][i]} · ${S.CH[i].name}`, W / 2, H * 0.53 + 64, { size: 38, fam: 'Inter', weight: 600, color: '#AEB8D2', align: 'center', boil: 0 });
+      ctx.restore();
+    }
   }
 
   // ---------- титры ----------
@@ -902,13 +922,14 @@
       // из темноты - в начале, в темноту - после глаза и между главами
       const black = Math.max(1 - sm(t, 0, 1.8), sm(t, ev.eyeShut - 0.3, ev.dark), 1 - wA);
       if (black > 0.001) { ctx.fillStyle = `rgba(3,4,8,${black})`; ctx.fillRect(0, 0, W, H); }
-      moonShot(ctx, t, moonAlpha(t));
+      if (PORTRAIT) shortEnd(ctx, t); else moonShot(ctx, t, moonAlpha(t));
       journalPage(ctx, t);
       // заголовок и титры глав
       cardText(ctx, t, ev.title, 5.6, 'I', 'Одна ночь на Мерцаловой топи');
       const ROMAN = ['II', 'III', 'IV', 'V'];
       ev.cards.forEach((c0, i) => cardText(ctx, t, c0, 3.6, ROMAN[i], S.CH[i + 1].name));
-      Subs.draw(ctx, t, S.subtitles, { style: 'clean', size: 46, y: H * 0.86, fam: 'Inter', maxW: W * 0.7, x: W * 0.5 });
+      if (PORTRAIT) Subs.draw(ctx, t, S.subtitles, { style: 'clean', size: 52, y: H * 0.25, fam: 'Inter', maxW: W * 0.84, x: W * 0.5 });
+      else Subs.draw(ctx, t, S.subtitles, { style: 'clean', size: 46, y: H * 0.86, fam: 'Inter', maxW: W * 0.7, x: W * 0.5 });
       // финал: журнал записи
       if (t >= ev.rec) {
         const fade = 1 - r01(t, S.DURATION - 0.6, S.DURATION), a = r01(t, ev.rec, ev.rec + 0.3) * fade;
